@@ -381,16 +381,57 @@ function renderTimeLogs() {
     currentState.timeLogs.forEach(log => {
         list.innerHTML += `
             <div class="flex-item-list">
-                <div class="item-details">
+                <div class="item-details" style="flex: 1;">
                     <h4>${log.desc}</h4>
                     <div class="item-meta">
                         <i class='bx bx-calendar'></i> ${log.date}
                     </div>
                 </div>
-                <div class="item-price" style="color: var(--text-primary); font-size: 1rem;">${log.duration}</div>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <div class="item-price" style="color: var(--text-primary); font-size: 1rem;">${log.duration}</div>
+                    <button class="btn btn-icon" style="width:30px; height:30px; font-size:1rem; background: var(--warning-color);" onclick="editTimeLog(${log.id})"><i class='bx bx-edit'></i></button>
+                    <button class="btn btn-icon" style="width:30px; height:30px; font-size:1rem; background: var(--danger-color);" onclick="deleteTimeLog(${log.id})"><i class='bx bx-trash'></i></button>
+                </div>
             </div>
         `;
     });
+}
+
+let activeTimeLogId = null;
+
+function editTimeLog(id) {
+    activeTimeLogId = id;
+    const log = currentState.timeLogs.find(l => l.id === id);
+    if (!log) return;
+
+    document.getElementById('edit-timelog-desc').value = log.desc;
+    document.getElementById('edit-timelog-duration').value = log.duration;
+    document.getElementById('edit-timelog-date').value = log.date;
+
+    openModal('edit-timelog-modal');
+}
+
+function saveTimeLogEdit() {
+    if (!activeTimeLogId) return;
+
+    const log = currentState.timeLogs.find(l => l.id === activeTimeLogId);
+    if (!log) return;
+
+    log.desc = document.getElementById('edit-timelog-desc').value || "บันทึกกิจกรรม";
+    log.duration = document.getElementById('edit-timelog-duration').value || "00:00:00";
+    log.date = document.getElementById('edit-timelog-date').value || new Date().toLocaleDateString('th-TH');
+
+    saveStateToStorage();
+    renderTimeLogs();
+    closeModal('edit-timelog-modal');
+}
+
+function deleteTimeLog(id) {
+    if (confirm("คุณต้องการลบบันทึกเวลานี้ใช่ไหม?")) {
+        currentState.timeLogs = currentState.timeLogs.filter(l => l.id !== id);
+        saveStateToStorage();
+        renderTimeLogs();
+    }
 }
 
 // --- ATTENDANCE FUNCTIONALITY ---
