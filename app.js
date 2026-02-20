@@ -26,17 +26,59 @@ let currentState = {
     compareResult: null
 };
 
+// --- DATA PERSISTENCE ---
+const STORAGE_KEY = 'siteMasterData';
+
+function saveStateToStorage() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(currentState));
+}
+
+function loadStateFromStorage() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+        try {
+            const parsed = JSON.parse(saved);
+            // Merge saved data with default structure to prevent missing fields
+            currentState = { ...currentState, ...parsed };
+            // Ensure timer structure is consistent after loading
+            if (!currentState.timer.hasOwnProperty('isActive')) currentState.timer.isActive = false;
+            if (!currentState.timer.hasOwnProperty('totalSeconds')) currentState.timer.totalSeconds = 0;
+            if (!currentState.timer.hasOwnProperty('startTime')) currentState.timer.startTime = null;
+        } catch (e) {
+            console.error("Error loading data from localStorage", e);
+        }
+    }
+}
+
 // --- INIT ---
+let timerInterval = null; // Global variable for timer interval
+
 document.addEventListener("DOMContentLoaded", () => {
     // Current date
     const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     document.getElementById('current-date').textContent = new Date().toLocaleDateString('th-TH', dateOptions);
 
+    loadStateFromStorage();
     renderMaterials();
     renderWorkflow();
-    updateTimerDisplay();
     renderTimeLogs();
-    if (typeof renderWorkers === 'function') renderWorkers();
+    renderWorkers(); // Initial render for workers
+
+    // Resume timer if active in state
+    if (currentState.timer.isActive) {
+        const now = Date.now();
+        currentState.timer.totalSeconds += Math.floor((now - currentState.timer.startTime) / 1000);
+        currentState.timer.startTime = now;
+        timerInterval = setInterval(updateTimerDisplay, 1000);
+        document.getElementById('timer-btn').innerHTML = "<i class='bx bx-pause-circle'></i> หยุดพัก";
+        document.getElementById('timer-btn').classList.replace('btn-primary', 'btn-danger');
+        document.getElementById('timer-status').textContent = 'กำลังทำงาน...';
+        document.getElementById('timer-status').style.color = 'var(--success-color)';
+    } else if (currentState.timer.totalSeconds > 0) {
+        updateTimerDisplay();
+        document.getElementById('timer-status').textContent = 'พักงาน';
+        document.getElementById('timer-status').style.color = 'var(--warning-color)';
+    }
 });
 
 // --- NAVIGATION ---
@@ -132,6 +174,7 @@ function editMaterial(id) {
 function deleteMaterial(id) {
     if (confirm("คุณต้องการลบรายการนี้ใช่ไหม?")) {
         currentState.materials = currentState.materials.filter(m => m.id !== id);
+        saveStateToStorage();
         renderMaterials();
     }
 }
@@ -162,6 +205,7 @@ function addMaterial() {
         });
     }
 
+    saveStateToStorage();
     renderMaterials();
     closeModal('add-material-modal');
 }
@@ -212,6 +256,7 @@ function editWorkflow(id) {
 function deleteWorkflow(id) {
     if (confirm("คุณต้องการขั้นตอนงานนี้ใช่ไหม?")) {
         currentState.workflow = currentState.workflow.filter(w => w.id !== id);
+        saveStateToStorage();
         renderWorkflow();
     }
 }
@@ -248,6 +293,7 @@ function saveWorkflow() {
         });
     }
 
+    saveStateToStorage();
     renderWorkflow();
     closeModal('add-workflow-modal');
 }
@@ -261,48 +307,65 @@ function formatTime(totalSeconds) {
 }
 
 function updateTimerDisplay() {
-    document.getElementById('timer-display').textContent = formatTime(currentState.timer.seconds);
-    document.getElementById('total-time-today').textContent = formatTime(currentState.timer.seconds);
+    document.getElementById('timer-display').textContent = formatTime(currentState.timer.totalSeconds);
+    document.getElementById('total-time-today').textContent = formatTime(currentState.timer.totalSeconds);
 }
 
-function startTimer() {
-    if (currentState.timer.isRunning) return;
+function toggleTimer() {
+    const btn = document.getElementById('timer-btn');
+    if (currentState.timer.isActive) {
+        clearInterval(timerInterval);
+        currentState.timer.isActive = false;
 
-    currentState.timer.isRunning = true;
-    currentState.timer.startTime = new Date();
+        const now = Date.now();
+        const sessionSeconds = Math.floor((now - currentState.timer.startTime) / 1000);
+        currentState.timer.totalSeconds += sessionSeconds;
 
-    document.getElementById('btn-start-time').style.display = 'none';
-    document.getElementById('btn-stop-time').style.display = 'inline-flex';
-    document.getElementById('timer-status').textContent = 'กำลังทำงาน...';
-    document.getElementById('timer-status').style.color = 'var(--success-color)';
+        btn.innerHTML = "<i class='bx bx-play-circle'></i> เริ่มนับเวลา";
+        btn.classList.replace('btn-danger', 'btn-primary');
+        document.getElementById('timer-status').textContent = 'พักงาน';
+        document.getElementById('timer-status').style.color = 'var(--warning-color)';
+        logTimeSpan("เริ่มทำงาน", "หยุดพัก", sessionSeconds);
+    } else {
+        currentState.timer.isActive = true;
+        currentState.timer.startTime = Date.now();
+        timerInterval = setInterval(updateTimerDisplay, 1000);
 
-    currentState.timer.interval = setInterval(() => {
-        currentState.timer.seconds++;
-        updateTimerDisplay();
-    }, 1000);
+        btn.innerHTML = "<i class='bx bx-pause-circle'></i> หยุดพัก";
+        btn.classList.replace('btn-primary', 'btn-danger');
+        document.getElementById('timer-status').textContent = 'กำลังทำงาน...';
+        document.getElementById('timer-status').style.color = 'var(--success-color)';
+    }
+    saveStateToStorage();
 }
 
-function stopTimer() {
-    if (!currentState.timer.isRunning) return;
+function resetTimer() {
+    clearInterval(timerInterval);
+    currentState.timer = {
+        isActive: false,
+        totalSeconds: 0,
+        startTime: null
+    };
+    document.getElementById('timer-display').textContent = "00:00:00";
+    document.getElementById('total-time-today').textContent = "00:00:00";
+    document.getElementById('timer-btn').innerHTML = "<i class='bx bx-play-circle'></i> เริ่มนับเวลา";
+    document.getElementById('timer-btn').className = "btn btn-primary w-100";
+    document.getElementById('timer-status').textContent = 'ยังไม่เริ่ม';
+    document.getElementById('timer-status').style.color = 'var(--text-secondary)';
+    saveStateToStorage();
+}
 
-    clearInterval(currentState.timer.interval);
-    currentState.timer.isRunning = false;
-
-    document.getElementById('btn-start-time').style.display = 'inline-flex';
-    document.getElementById('btn-stop-time').style.display = 'none';
-    document.getElementById('timer-status').textContent = 'พักงาน';
-    document.getElementById('timer-status').style.color = 'var(--warning-color)';
-
-    const endTime = new Date();
-    const durationStr = formatTime(currentState.timer.seconds);
-
+function logTimeSpan(actionStart, actionEnd, seconds) {
+    if (seconds <= 0) return;
+    const date = new Date().toLocaleDateString('th-TH');
+    const timeSpent = formatTime(seconds);
     currentState.timeLogs.unshift({
         id: Date.now(),
-        date: endTime.toLocaleDateString('th-TH'),
-        timeStr: `${currentState.timer.startTime.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} - ${endTime.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}`,
-        duration: durationStr
+        date: date,
+        duration: timeSpent,
+        desc: `บันทึกกิจกรรม (${actionStart} - ${actionEnd})`
     });
-
+    saveStateToStorage();
     renderTimeLogs();
 }
 
@@ -319,9 +382,9 @@ function renderTimeLogs() {
         list.innerHTML += `
             <div class="flex-item-list">
                 <div class="item-details">
-                    <h4>กะงาน: ${log.date}</h4>
+                    <h4>${log.desc}</h4>
                     <div class="item-meta">
-                        <i class='bx bx-time'></i> ${log.timeStr}
+                        <i class='bx bx-calendar'></i> ${log.date}
                     </div>
                 </div>
                 <div class="item-price" style="color: var(--text-primary); font-size: 1rem;">${log.duration}</div>
@@ -386,6 +449,8 @@ function togglePresence(id) {
     const worker = currentState.workers.find(w => w.id === id);
     if (worker) {
         worker.isPresent = !worker.isPresent;
+        saveStateToStorage();
+        renderWorkers(); // re-render to update UI if necessary, though CSS handles the switch visually
     }
 }
 
@@ -406,6 +471,7 @@ function addWorker() {
         advancePayment: 0
     });
 
+    saveStateToStorage();
     renderWorkers();
     closeModal('add-worker-modal');
 }
@@ -433,6 +499,7 @@ function saveWorkerFinancials() {
     worker.accumulatedWage = parseFloat(document.getElementById('edit-accumulated').value) || 0;
     worker.advancePayment = parseFloat(document.getElementById('edit-advance').value) || 0;
 
+    saveStateToStorage();
     renderWorkers();
     closeModal('edit-wage-modal');
 }
@@ -448,6 +515,7 @@ function checkoutWorkersDay() {
         }
     });
 
+    saveStateToStorage();
     alert(`บันทึกยอดรายวันสำเร็จ (${count} คน)\nระบบได้นำค่าแรงไปทบยอดสะสมและล้างสถานะเข้างานสำหรับวันพรุ่งนี้แล้ว`);
     renderWorkers();
 }
@@ -458,6 +526,7 @@ function clearWageCycle() {
             w.accumulatedWage = 0;
             w.advancePayment = 0;
         });
+        saveStateToStorage();
         renderWorkers();
         alert('ล้างรอบบิลค่าแรงเรียบร้อยแล้ว');
     }
@@ -692,7 +761,8 @@ function calculateCompare() {
         currentState.compareResult = {
             storeName: bestStore,
             price: bestPrice,
-            productName: document.getElementById('compare-name').value || 'สินค้าจากการเปรียบเทียบ'
+            productName: document.getElementById('compare-name').value || 'สินค้าจากการเปรียบเทียบ',
+            location: `${nameA} vs ${nameB}`
         };
 
         detailsDiv.innerHTML = html;
@@ -701,20 +771,28 @@ function calculateCompare() {
         resultDiv.style.display = 'none';
         currentState.compareResult = null;
     }
+    saveStateToStorage();
 }
 
 function saveToMaterialsFromCompare() {
-    if (currentState.compareResult) {
-        currentState.materials.push({
-            id: Date.now(),
-            name: currentState.compareResult.productName,
-            price: currentState.compareResult.price,
-            location: currentState.compareResult.storeName
-        });
+    if (!currentState.compareResult) return;
 
-        // Notify user and navigate
-        alert('บันทึกลงรายการ "ซื้อของ" เรียบร้อยแล้ว!');
-        renderMaterials();
-        navigate('materials', document.querySelector('.nav-item[onclick*="materials"]'));
-    }
+    currentState.materials.push({
+        id: Date.now(),
+        name: currentState.compareResult.productName,
+        price: currentState.compareResult.price,
+        location: currentState.compareResult.storeName
+    });
+
+    saveStateToStorage();
+    alert(`บันทึก ${currentState.compareResult.productName} จากร้าน ${currentState.compareResult.storeName} ในราคา ฿${currentState.compareResult.price} ลงรายการจัดซื้อเรียบร้อยแล้ว`);
+
+    // Reset and hide compare view
+    document.getElementById('store-a-price').value = '';
+    document.getElementById('store-b-price').value = '';
+    document.getElementById('compare-name').value = '';
+    document.getElementById('compare-result').style.display = 'none';
+
+    // Navigate back to materials to see the new item
+    navigate('materials', document.querySelector('.bottom-nav .nav-item:nth-child(2)'));
 }
