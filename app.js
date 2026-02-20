@@ -288,14 +288,15 @@ function renderWorkflow() {
 
         let subTasksHtml = '';
         if (item.subTasks && item.subTasks.length > 0) {
-            subTasksHtml = `<div class="subtask-timeline" style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--glass-border);">`;
+            subTasksHtml = `<div class="subtask-timeline" style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 8px; border: 1px solid var(--glass-border);">`;
+            subTasksHtml += `<div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">รายการย่อย:</div>`;
             item.subTasks.forEach((st, idx) => {
                 const isDone = st.completed ? 'checked' : '';
                 subTasksHtml += `
-                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem; font-size: 0.85rem; color: ${st.completed ? 'var(--success-color)' : 'var(--text-primary)'}; opacity: ${st.completed ? '0.7' : '1'};">
-                        <input type="checkbox" ${isDone} onclick="toggleSubTask(${item.id}, ${idx})" style="cursor: pointer;">
+                    <label style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; cursor: pointer; color: ${st.completed ? 'var(--success-color)' : 'var(--text-primary)'}; opacity: ${st.completed ? '0.7' : '1'}; transition: all 0.2s;">
+                        <input type="checkbox" ${isDone} onchange="toggleSubTask(${item.id}, ${idx})" style="cursor: pointer; width: 18px; height: 18px;">
                         <span style="${st.completed ? 'text-decoration: line-through;' : ''}">${st.text}</span>
-                    </div>
+                    </label>
                 `;
             });
             subTasksHtml += `</div>`;

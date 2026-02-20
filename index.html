@@ -421,6 +421,20 @@
                         <label>วันที่ดำเนินการ</label>
                         <input type="text" id="wf-date" placeholder="เช่น 24 พ.ย. หรือ วันนี้">
                     </div>
+                    <div class="form-group"
+                        style="padding: 1rem; background: rgba(59, 130, 246, 0.05); border-radius: 12px; border: 1px solid var(--primary-color);">
+                        <label style="color: var(--primary-color); font-weight: 600;"><i class='bx bx-list-check'></i>
+                            รายการย่อย (Sub-tasks)</label>
+                        <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <input type="text" id="subtask-input" placeholder="เช่น ขุดหลุม, วางเหล็ก..."
+                                onkeydown="if(event.key==='Enter') addSubTask()" style="flex: 1;">
+                            <button class="btn btn-primary" onclick="addSubTask()"
+                                style="padding: 0.5rem 1rem; color: white;"><i class='bx bx-plus'></i></button>
+                        </div>
+                        <div id="subtask-list-modal" style="max-height: 150px; overflow-y: auto;">
+                            <!-- Temp subtasks will appear here -->
+                        </div>
+                    </div>
                     <div class="form-group">
                         <label>สถานะงาน</label>
                         <select id="wf-status"
@@ -429,20 +443,6 @@
                             <option style="color:black;" value="active">กำลังทำ</option>
                             <option style="color:black;" value="completed">เสร็จสิ้น</option>
                         </select>
-                    </div>
-                    <div class="form-group"
-                        style="padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 12px; border: 1px solid var(--glass-border);">
-                        <label style="color: var(--warning-color); font-weight: 600;"><i class='bx bx-list-check'></i>
-                            รายการย่อย (Sub-tasks)</label>
-                        <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
-                            <input type="text" id="subtask-input" placeholder="เช่น ขุดหลุม, วางเหล็ก..."
-                                style="flex: 1;">
-                            <button class="btn btn-warning" onclick="addSubTask()"
-                                style="padding: 0.5rem 1rem; color: white;"><i class='bx bx-plus'></i></button>
-                        </div>
-                        <div id="subtask-list-modal" style="max-height: 150px; overflow-y: auto;">
-                            <!-- Temp subtasks will appear here -->
-                        </div>
                     </div>
                     <div class="form-group">
                         <label>แนบรูปถ่าย / เปิดกล้อง</label>
