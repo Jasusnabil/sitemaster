@@ -117,14 +117,27 @@ function navigate(viewId, navElement = null) {
 // --- MATERIALS FUNCTIONALITY ---
 function renderMaterials() {
     const list = document.getElementById('material-list');
+    const searchTerm = (document.getElementById('search-materials')?.value || '').toLowerCase();
     list.innerHTML = '';
 
     let total = 0;
-    currentState.materials.forEach(mat => {
+    const filteredMaterials = currentState.materials.filter(m => {
+        return m.name.toLowerCase().includes(searchTerm) || m.location.toLowerCase().includes(searchTerm);
+    });
+
+    if (filteredMaterials.length === 0) {
+        list.innerHTML = `<p style="text-align: center; color: var(--text-secondary); margin-top: 1rem;">ไม่พบรายการจัดซื้อ</p>`;
+        return;
+    }
+
+    filteredMaterials.forEach(mat => {
         total += parseFloat(mat.price);
+        let imgTag = mat.image ? `<img src="${mat.image}" style="max-width: 50px; max-height: 50px; border-radius: 4px; object-fit: cover;" alt="receipt">` : '';
+
         list.innerHTML += `
             <div class="flex-item-list">
-                <div class="item-details" style="flex: 1;">
+                ${imgTag}
+                <div class="item-details" style="flex: 1; margin-left: ${mat.image ? '0.5rem' : '0'};">
                     <h4>${mat.name}</h4>
                     <div class="item-meta">
                         <i class='bx bx-store-alt'></i> ${mat.location}
@@ -168,6 +181,7 @@ function editMaterial(id) {
     document.getElementById('mat-name').value = mat.name;
     document.getElementById('mat-price').value = mat.price;
     document.getElementById('mat-location').value = mat.location;
+    document.getElementById('mat-image').value = ''; // Reset file input
     openModal('add-material-modal');
 }
 
@@ -179,12 +193,22 @@ function deleteMaterial(id) {
     }
 }
 
-function addMaterial() {
+async function addMaterial() {
     const name = document.getElementById('mat-name').value;
     const price = document.getElementById('mat-price').value;
     const location = document.getElementById('mat-location').value;
+    const imageInput = document.getElementById('mat-image');
 
     if (!name) return alert("กรุณาใส่ชื่อรายการ");
+
+    let imageData = null;
+    if (imageInput.files && imageInput.files[0]) {
+        try {
+            imageData = await readAndCompressImage(imageInput.files[0]);
+        } catch (e) {
+            console.warn("Could not read image", e);
+        }
+    }
 
     if (activeMaterialId) {
         // Edit existing
@@ -193,6 +217,7 @@ function addMaterial() {
             mat.name = name;
             mat.price = price ? parseFloat(price) : 0;
             mat.location = location || "ไม่ระบุ";
+            if (imageData) mat.image = imageData;
         }
         activeMaterialId = null;
     } else {
@@ -201,7 +226,8 @@ function addMaterial() {
             id: Date.now(),
             name,
             price: price ? parseFloat(price) : 0,
-            location: location || "ไม่ระบุ"
+            location: location || "ไม่ระบุ",
+            image: imageData
         });
     }
 
@@ -213,13 +239,29 @@ function addMaterial() {
 // --- WORKFLOW FUNCTIONALITY ---
 function renderWorkflow() {
     const list = document.getElementById('workflow-list');
+    const searchTerm = (document.getElementById('search-workflow')?.value || '').toLowerCase();
+    const filterStatus = document.getElementById('filter-workflow')?.value || 'all';
+
     list.innerHTML = '';
 
-    currentState.workflow.forEach(item => {
+    const filteredWorkflow = currentState.workflow.filter(w => {
+        const matchesSearch = w.step.toLowerCase().includes(searchTerm);
+        const matchesStatus = filterStatus === 'all' || w.status === filterStatus;
+        return matchesSearch && matchesStatus;
+    });
+
+    if (filteredWorkflow.length === 0) {
+        list.innerHTML = `<p style="text-align: center; color: var(--text-secondary); margin-top: 1rem;">ไม่พบกระบวนการทำงาน</p>`;
+        return;
+    }
+
+    filteredWorkflow.forEach(item => {
         let badge = '';
         if (item.status === 'completed') badge = `<span class="badge badge-success">เสร็จสิ้น</span>`;
         else if (item.status === 'active') badge = `<span class="badge badge-primary">กำลังทำ</span>`;
         else badge = `<span class="badge" style="background: rgba(255,255,255,0.1)">รอ</span>`;
+
+        let imgTag = item.image ? `<img src="${item.image}" style="width: 100%; max-height: 120px; object-fit: cover; border-radius: 6px; margin-top: 0.5rem;" alt="work photo">` : '';
 
         list.innerHTML += `
             <div class="timeline-item ${item.status}">
@@ -234,6 +276,7 @@ function renderWorkflow() {
                         </div>
                     </div>
                     <p class="subtitle mt-3"><i class='bx bx-calendar'></i> ${item.date}</p>
+                    ${imgTag}
                 </div>
             </div>
         `;
@@ -250,6 +293,7 @@ function editWorkflow(id) {
     document.getElementById('wf-step').value = item.step;
     document.getElementById('wf-date').value = item.date;
     document.getElementById('wf-status').value = item.status;
+    document.getElementById('wf-image').value = '';
     openModal('add-workflow-modal');
 }
 
@@ -261,20 +305,65 @@ function deleteWorkflow(id) {
     }
 }
 
+function applyTemplate() {
+    const type = document.getElementById('brainstorm-type').value;
+    if (type === 'none') return alert('กรุณาเลือกประเภทงาน');
+
+    if (type === 'fence') {
+        const steps = [
+            '1. ตรวจสอบหลักหมุดและข้อกฎหมาย',
+            '2. ออกแบบโครงสร้างและฐานราก',
+            '3. เตรียมพื้นที่และขุดหลุมวางฐานราก',
+            '4. ติดตั้งเสารั้วและเทคานคอดิน',
+            '5. ก่อผนังรั้ว ฉาบปูน และทาสี',
+            '6. ตรวจสอบความเรียบร้อยและปรับภูมิทัศน์'
+        ];
+
+        let confirmMsg = confirm("ระบบจะเพิ่มขั้นตอนงานทำรั้วมาตรฐานจำนวน 6 ขั้นตอน ยืนยันใช่ไหม?");
+        if (!confirmMsg) return;
+
+        steps.forEach((step, index) => {
+            currentState.workflow.push({
+                id: Date.now() + index, // Ensure unique IDs
+                step: step,
+                date: 'ยังไม่ระบุ',
+                status: 'pending',
+                image: null
+            });
+        });
+
+        saveStateToStorage();
+        renderWorkflow();
+        closeModal('brainstorm-modal');
+        alert('เพิ่มขั้นตอนงานสร้างรั้วบ้านสำเร็จ!');
+    }
+}
+
 function openAddWorkflowModal() {
     activeWorkflowId = null;
     document.getElementById('wf-step').value = '';
     document.getElementById('wf-date').value = '';
     document.getElementById('wf-status').value = 'pending';
+    document.getElementById('wf-image').value = '';
     openModal('add-workflow-modal');
 }
 
-function saveWorkflow() {
+async function saveWorkflow() {
     const step = document.getElementById('wf-step').value;
     const date = document.getElementById('wf-date').value || "ไม่ระบุ";
     const status = document.getElementById('wf-status').value;
+    const imageInput = document.getElementById('wf-image');
 
     if (!step) return alert("กรุณาใส่ชื่อกระบวนการ");
+
+    let imageData = null;
+    if (imageInput.files && imageInput.files[0]) {
+        try {
+            imageData = await readAndCompressImage(imageInput.files[0]);
+        } catch (e) {
+            console.warn("Could not read image", e);
+        }
+    }
 
     if (activeWorkflowId) {
         const item = currentState.workflow.find(w => w.id === activeWorkflowId);
@@ -282,6 +371,7 @@ function saveWorkflow() {
             item.step = step;
             item.date = date;
             item.status = status;
+            if (imageData) item.image = imageData;
         }
         activeWorkflowId = null;
     } else {
@@ -289,13 +379,48 @@ function saveWorkflow() {
             id: Date.now(),
             step,
             date,
-            status
+            status,
+            image: imageData
         });
     }
 
     saveStateToStorage();
     renderWorkflow();
     closeModal('add-workflow-modal');
+}
+
+// Helper to compress images before storing in LocalStorage
+function readAndCompressImage(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = event => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                // Max Width 800px
+                const maxWidth = 800;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxWidth) {
+                    height = Math.round(height * maxWidth / width);
+                    width = maxWidth;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                ctx.drawImage(img, 0, 0, width, height);
+                // Compress to 0.7 quality JPEG
+                resolve(canvas.toDataURL('image/jpeg', 0.7));
+            };
+            img.onerror = reject;
+        };
+        reader.onerror = reject;
+    });
 }
 
 // --- TIMER FUNCTIONALITY ---
@@ -321,9 +446,10 @@ function toggleTimer() {
         const sessionSeconds = Math.floor((now - currentState.timer.startTime) / 1000);
         currentState.timer.totalSeconds += sessionSeconds;
 
-        btn.innerHTML = "<i class='bx bx-play-circle'></i> เริ่มนับเวลา";
-        btn.classList.replace('btn-danger', 'btn-primary');
-        document.getElementById('timer-status').textContent = 'พักงาน';
+        btn.innerHTML = "<i class='bx bx-play'></i> เริ่มงาน";
+        btn.classList.remove('btn-danger', 'btn-primary', 'btn-success');
+        btn.classList.add('btn-success');
+        document.getElementById('timer-status').textContent = 'พักงาน / เลิกงาน';
         document.getElementById('timer-status').style.color = 'var(--warning-color)';
         logTimeSpan("เริ่มทำงาน", "หยุดพัก", sessionSeconds);
     } else {
@@ -331,8 +457,9 @@ function toggleTimer() {
         currentState.timer.startTime = Date.now();
         timerInterval = setInterval(updateTimerDisplay, 1000);
 
-        btn.innerHTML = "<i class='bx bx-pause-circle'></i> หยุดพัก";
-        btn.classList.replace('btn-primary', 'btn-danger');
+        btn.innerHTML = "<i class='bx bx-stop'></i> เลิกงาน / หยุดพัก";
+        btn.classList.remove('btn-danger', 'btn-primary', 'btn-success');
+        btn.classList.add('btn-danger');
         document.getElementById('timer-status').textContent = 'กำลังทำงาน...';
         document.getElementById('timer-status').style.color = 'var(--success-color)';
     }
@@ -836,4 +963,73 @@ function saveToMaterialsFromCompare() {
 
     // Navigate back to materials to see the new item
     navigate('materials', document.querySelector('.bottom-nav .nav-item:nth-child(2)'));
+}
+
+// --- DATA MANAGEMENT (BACKUP & EXPORT) ---
+function exportDataJSON() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentState));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "siteMaster_backup_" + new Date().toISOString().slice(0, 10) + ".json");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+}
+
+function triggerImportJSON() {
+    document.getElementById('import-json').click();
+}
+
+function importDataJSON(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const importedData = JSON.parse(e.target.result);
+            if (importedData && typeof importedData === 'object') {
+                currentState = { ...currentState, ...importedData };
+                saveStateToStorage();
+                alert("กู้คืนข้อมูลสำเร็จ! ระบบจะทำการรีเฟรชหน้าเว็บ");
+                location.reload();
+            }
+        } catch (err) {
+            alert("ไฟล์ไม่ถูกต้อง หรือเสียหาย");
+        }
+    };
+    reader.readAsText(file);
+}
+
+function exportMaterialsCSV() {
+    if (currentState.materials.length === 0) return alert("ไม่มีข้อมูลจัดซื้อ");
+    let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // Add BOM
+    csvContent += "ชื่อวัสดุ/อุปกรณ์,ราคา (บาท),ร้านค้า\n";
+    currentState.materials.forEach(m => {
+        csvContent += `"${m.name}","${m.price}","${m.location}"\n`;
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "materials_" + new Date().toISOString().slice(0, 10) + ".csv");
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+}
+
+function exportWorkersCSV() {
+    if (currentState.workers.length === 0) return alert("ไม่มีข้อมูลค่าแรง");
+    let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+    csvContent += "ชื่อพนักงาน,ตำแหน่ง,ค่าแรงต่อวัน,ยอดสะสม,เบิกล่วงหน้า\n";
+    currentState.workers.forEach(w => {
+        csvContent += `"${w.name}","${w.role}","${w.wage}","${w.accumulatedWage}","${w.advancePayment}"\n`;
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "workers_" + new Date().toISOString().slice(0, 10) + ".csv");
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
 }

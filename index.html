@@ -52,6 +52,21 @@
                     <p>สถานที่: ไซต์งาน A</p>
                     <button class="btn btn-primary mt-3" onclick="navigate('time')">ลงเวลาทำงาน</button>
                 </div>
+
+                <h2 class="section-title mt-4">จัดการระบบ (สำรองข้อมูล & ออกรายงาน)</h2>
+                <div class="card" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                    <button class="btn btn-primary" onclick="exportDataJSON()"
+                        style="background: var(--glass-border); color:var(--text-primary);"><i
+                            class='bx bx-cloud-download'></i> สำรองไฟล์ (Backup)</button>
+                    <button class="btn btn-warning" onclick="triggerImportJSON()" style="color:white;"><i
+                            class='bx bx-cloud-upload'></i> กู้คืนไฟล์ (Restore)</button>
+                    <button class="btn btn-success" onclick="exportMaterialsCSV()" style="background: #10b981;"><i
+                            class='bx bx-table'></i> Excel (จัดซื้อ)</button>
+                    <button class="btn btn-success" onclick="exportWorkersCSV()" style="background: #10b981;"><i
+                            class='bx bx-table'></i> Excel (ค่าแรง)</button>
+                    <input type="file" id="import-json" accept=".json" style="display:none;"
+                        onchange="importDataJSON(event)">
+                </div>
             </section>
 
             <!-- Materials View -->
@@ -60,6 +75,14 @@
                     <h2 class="section-title">รายการจัดซื้อ</h2>
                     <button class="btn btn-icon" onclick="openModal('add-material-modal')"><i
                             class='bx bx-plus'></i></button>
+                </div>
+
+                <div class="search-container" style="margin-bottom: 1rem; position: relative;">
+                    <i class='bx bx-search'
+                        style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary);"></i>
+                    <input type="text" id="search-materials" placeholder="ค้นหาชื่อวัสดุ หรือ ร้านค้า..."
+                        oninput="renderMaterials()"
+                        style="width: 100%; padding: 0.75rem 1rem 0.75rem 2.5rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0, 0, 0, 0.2); color: white; font-size: 1rem;">
                 </div>
 
                 <div class="material-list" id="material-list">
@@ -71,8 +94,32 @@
             <section id="view-workflow" class="view">
                 <div class="flex-between">
                     <h2 class="section-title">กระบวนการทำงาน</h2>
-                    <button class="btn btn-icon" onclick="openAddWorkflowModal()"><i class='bx bx-plus'></i></button>
+                    <div style="display:flex; gap:0.5rem;">
+                        <button class="btn btn-warning" style="padding: 0.5rem; color:white; border-radius:8px;"
+                            onclick="openModal('brainstorm-modal')" title="แนะนำขั้นตอน"><i class='bx bx-bulb'></i>
+                            แนะนำ</button>
+                        <button class="btn btn-icon" onclick="openAddWorkflowModal()"><i
+                                class='bx bx-plus'></i></button>
+                    </div>
                 </div>
+
+                <div class="search-container" style="margin-bottom: 1rem; display: flex; gap: 0.5rem;">
+                    <div style="position: relative; flex: 1;">
+                        <i class='bx bx-search'
+                            style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary);"></i>
+                        <input type="text" id="search-workflow" placeholder="ค้นหากระบวนการ..."
+                            oninput="renderWorkflow()"
+                            style="width: 100%; padding: 0.75rem 1rem 0.75rem 2.5rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0, 0, 0, 0.2); color: white; font-size: 1rem;">
+                    </div>
+                    <select id="filter-workflow" onchange="renderWorkflow()"
+                        style="padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0, 0, 0, 0.2); color: white; font-size: 1rem; width: 120px; outline:none; cursor:pointer;">
+                        <option style="color:black;" value="all">ทั้งหมด</option>
+                        <option style="color:black;" value="pending">รอดำเนินการ</option>
+                        <option style="color:black;" value="active">กำลังทำ</option>
+                        <option style="color:black;" value="completed">เสร็จสิ้น</option>
+                    </select>
+                </div>
+
                 <div class="timeline" id="workflow-list" style="margin-top: 1rem;">
                     <!-- Items dynamically added -->
                 </div>
@@ -84,10 +131,8 @@
                     <div class="timer-display" id="timer-display">00:00:00</div>
                     <p class="timer-status" id="timer-status">พร้อมเริ่มงาน</p>
                     <div class="timer-controls">
-                        <button class="btn btn-large btn-success" id="btn-start-time" onclick="startTimer()"><i
+                        <button class="btn btn-large btn-success" id="timer-btn" onclick="toggleTimer()"><i
                                 class='bx bx-play'></i> เริ่มงาน</button>
-                        <button class="btn btn-large btn-danger" id="btn-stop-time" onclick="stopTimer()"
-                            style="display: none;"><i class='bx bx-stop'></i> เลิกงาน</button>
                     </div>
                 </div>
 
@@ -307,6 +352,11 @@
                         <label>สถานที่ซื้อ / ร้านค้า</label>
                         <input type="text" id="mat-location" placeholder="เช่น ไทวัสดุ สาขา...">
                     </div>
+                    <div class="form-group">
+                        <label>แนบรูปถ่าย (ถ้ามี)</label>
+                        <input type="file" id="mat-image" accept="image/*"
+                            style="width: 100%; padding: 0.5rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0, 0, 0, 0.2); color: white;">
+                    </div>
                     <button class="btn btn-primary w-100" onclick="addMaterial()">บันทึกรายการ</button>
                 </div>
             </div>
@@ -337,8 +387,65 @@
                             <option style="color:black;" value="completed">เสร็จสิ้น</option>
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label>แนบรูปถ่าย (ถ้ามี)</label>
+                        <input type="file" id="wf-image" accept="image/*"
+                            style="width: 100%; padding: 0.5rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0, 0, 0, 0.2); color: white;">
+                    </div>
                     <button class="btn btn-primary w-100" style="margin-top:1rem;"
                         onclick="saveWorkflow()">บันทึกงาน</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="edit-timelog-modal" class="modal">
+            <div class="modal-content card">
+                <div class="modal-header">
+                    <h3>แก้ไขบันทึกเวลา</h3>
+                    <button class="close-btn" onclick="closeModal('edit-timelog-modal')"><i
+                            class='bx bx-x'></i></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>รายละเอียดกิจกรรม</label>
+                        <input type="text" id="edit-timelog-desc"
+                            placeholder="เช่น บันทึกกิจกรรม (เริ่มทำงาน - หยุดพัก)">
+                    </div>
+                    <div class="form-group">
+                        <label>ระยะเวลา (ชม:นาที:วินาที)</label>
+                        <input type="text" id="edit-timelog-duration" placeholder="เช่น 01:30:00">
+                    </div>
+                    <div class="form-group">
+                        <label>วันที่</label>
+                        <input type="text" id="edit-timelog-date" placeholder="เช่น 24 พ.ย. 2566">
+                    </div>
+                    <button class="btn btn-warning w-100" style="color:white; margin-top:1rem;"
+                        onclick="saveTimeLogEdit()">บันทึกการแก้ไข</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="brainstorm-modal" class="modal">
+            <div class="modal-content card" style="border-color: var(--warning-color);">
+                <div class="modal-header">
+                    <h3><i class='bx bx-bulb' style="color:var(--warning-color);"></i> แนะนำขั้นตอน (Brainstorm)</h3>
+                    <button class="close-btn" onclick="closeModal('brainstorm-modal')"><i class='bx bx-x'></i></button>
+                </div>
+                <div class="modal-body">
+                    <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 1rem;">
+                        เลืองานหลักที่คุณต้องการทำ ระบบจะสร้างขั้นตอนปฏิบัติมาตรฐาน (Standard Steps)
+                        ลงในกระบวนการทำงานแบบอัตโนมัติ เพื่อป้องกันการตกหล่น
+                    </p>
+                    <div class="form-group">
+                        <label>เลือกแม่แบบงาน (Template)</label>
+                        <select id="brainstorm-type"
+                            style="width: 100%; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0, 0, 0, 0.2); color: white; font-size: 1rem; cursor:pointer; outline:none;">
+                            <option style="color:black;" value="none">-- เลือกประเภทงาน --</option>
+                            <option style="color:black;" value="fence">งานสร้างรั้วบ้านมาตรฐาน (6 ขั้นตอน)</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-warning w-100" style="color:white; margin-top:1rem;"
+                        onclick="applyTemplate()">สร้างขั้นตอนอัตโนมัติ <i class='bx bx-magic-wand'></i></button>
                 </div>
             </div>
         </div>
