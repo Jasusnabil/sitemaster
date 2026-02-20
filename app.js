@@ -1,0 +1,720 @@
+// --- STATE ---
+let currentState = {
+    materials: [
+        { id: 1, name: "ปูนซีเมนต์ (เสือ)", price: 145, location: "ไทวัสดุ พระราม 2" },
+        { id: 2, name: "เหล็กกล่อง 1x1", price: 350, location: "Global House" }
+    ],
+    workflow: [
+        { id: 1, step: "วัดพื้นที่และตีเส้น", date: "20 พ.ย.", status: "completed" },
+        { id: 2, step: "ขุดหลุมลงเสาเข็ม", date: "21 พ.ย.", status: "completed" },
+        { id: 3, step: "ขึ้นโครงเหล็กและเทปูน", date: "วันนี้", status: "active" },
+        { id: 4, step: "ก่ออิฐ/ติดตะแกรงรั้ว", date: "รอดำเนินการ", status: "pending" },
+        { id: 5, step: "ทาสีและเก็บงาน", date: "รอดำเนินการ", status: "pending" }
+    ],
+    timeLogs: [],
+    timer: {
+        isRunning: false,
+        seconds: 0,
+        interval: null,
+        startTime: null
+    },
+    workers: [
+        { id: 1, name: "สมชาย ใจดี", role: "หัวหน้าช่าง", wage: 600, isPresent: true, accumulatedWage: 1200, advancePayment: 500 },
+        { id: 2, name: "สมหญิง รักงาน", role: "ช่างปูน", wage: 450, isPresent: true, accumulatedWage: 900, advancePayment: 0 },
+        { id: 3, name: "บุญมี แข็งขัน", role: "ผู้ช่วยช่าง", wage: 350, isPresent: false, accumulatedWage: 700, advancePayment: 200 }
+    ],
+    compareResult: null
+};
+
+// --- INIT ---
+document.addEventListener("DOMContentLoaded", () => {
+    // Current date
+    const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    document.getElementById('current-date').textContent = new Date().toLocaleDateString('th-TH', dateOptions);
+
+    renderMaterials();
+    renderWorkflow();
+    updateTimerDisplay();
+    renderTimeLogs();
+    if (typeof renderWorkers === 'function') renderWorkers();
+});
+
+// --- NAVIGATION ---
+const pages = {
+    home: "ภาพรวมงาน",
+    materials: "รายการจัดซื้อ",
+    workflow: "กระบวนการงาน",
+    time: "ลงเวลาทำงาน",
+    attendance: "เช็คชื่อทีมงาน",
+    compare: "เปรียบเทียบราคา"
+};
+
+function navigate(viewId, navElement = null) {
+    // Update Views
+    document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+    document.getElementById(`view-${viewId}`).classList.add('active');
+
+    // Update Header
+    document.getElementById('page-title').textContent = pages[viewId];
+
+    // Update Nav Icons
+    if (navElement) {
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        navElement.classList.add('active');
+    } else {
+        // Fallback if navigated programmatically
+        document.querySelectorAll('.nav-item').forEach(el => {
+            el.classList.remove('active');
+            if (el.getAttribute('onclick') && el.getAttribute('onclick').includes(viewId)) {
+                el.classList.add('active');
+            }
+        });
+    }
+}
+
+// --- MATERIALS FUNCTIONALITY ---
+function renderMaterials() {
+    const list = document.getElementById('material-list');
+    list.innerHTML = '';
+
+    let total = 0;
+    currentState.materials.forEach(mat => {
+        total += parseFloat(mat.price);
+        list.innerHTML += `
+            <div class="flex-item-list">
+                <div class="item-details" style="flex: 1;">
+                    <h4>${mat.name}</h4>
+                    <div class="item-meta">
+                        <i class='bx bx-store-alt'></i> ${mat.location}
+                    </div>
+                </div>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <div class="item-price">฿${mat.price.toLocaleString()}</div>
+                    <button class="btn btn-icon" style="width:30px; height:30px; font-size:1rem; background: var(--warning-color);" onclick="editMaterial(${mat.id})"><i class='bx bx-edit'></i></button>
+                    <button class="btn btn-icon" style="width:30px; height:30px; font-size:1rem; background: var(--danger-color);" onclick="deleteMaterial(${mat.id})"><i class='bx bx-trash'></i></button>
+                </div>
+            </div>
+        `;
+    });
+
+    if (currentState.materials.length > 0) {
+        list.innerHTML += `
+            <div class="flex-item-list" style="background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.3);">
+                <div class="item-details"><h4>ยอดรวมประมาณการ</h4></div>
+                <div class="item-price">฿${total.toLocaleString()}</div>
+            </div>
+        `;
+    } else {
+        list.innerHTML = `<p style="text-align:center; color: var(--text-secondary); margin-top:2rem;">ยังไม่มีรายการ</p>`;
+    }
+}
+
+function openModal(id) { document.getElementById(id).classList.add('active'); }
+function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+    const inputs = document.getElementById(id).querySelectorAll('input');
+    inputs.forEach(input => input.value = '');
+}
+
+let activeMaterialId = null;
+
+function editMaterial(id) {
+    activeMaterialId = id;
+    const mat = currentState.materials.find(m => m.id === id);
+    if (!mat) return;
+
+    document.getElementById('mat-name').value = mat.name;
+    document.getElementById('mat-price').value = mat.price;
+    document.getElementById('mat-location').value = mat.location;
+    openModal('add-material-modal');
+}
+
+function deleteMaterial(id) {
+    if (confirm("คุณต้องการลบรายการนี้ใช่ไหม?")) {
+        currentState.materials = currentState.materials.filter(m => m.id !== id);
+        renderMaterials();
+    }
+}
+
+function addMaterial() {
+    const name = document.getElementById('mat-name').value;
+    const price = document.getElementById('mat-price').value;
+    const location = document.getElementById('mat-location').value;
+
+    if (!name) return alert("กรุณาใส่ชื่อรายการ");
+
+    if (activeMaterialId) {
+        // Edit existing
+        const mat = currentState.materials.find(m => m.id === activeMaterialId);
+        if (mat) {
+            mat.name = name;
+            mat.price = price ? parseFloat(price) : 0;
+            mat.location = location || "ไม่ระบุ";
+        }
+        activeMaterialId = null;
+    } else {
+        // Add new
+        currentState.materials.push({
+            id: Date.now(),
+            name,
+            price: price ? parseFloat(price) : 0,
+            location: location || "ไม่ระบุ"
+        });
+    }
+
+    renderMaterials();
+    closeModal('add-material-modal');
+}
+
+// --- WORKFLOW FUNCTIONALITY ---
+function renderWorkflow() {
+    const list = document.getElementById('workflow-list');
+    list.innerHTML = '';
+
+    currentState.workflow.forEach(item => {
+        let badge = '';
+        if (item.status === 'completed') badge = `<span class="badge badge-success">เสร็จสิ้น</span>`;
+        else if (item.status === 'active') badge = `<span class="badge badge-primary">กำลังทำ</span>`;
+        else badge = `<span class="badge" style="background: rgba(255,255,255,0.1)">รอ</span>`;
+
+        list.innerHTML += `
+            <div class="timeline-item ${item.status}">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                    <div class="flex-between">
+                        <h4 style="flex:1;">${item.step}</h4>
+                        <div style="display:flex; gap:0.5rem; align-items:center;">
+                            ${badge}
+                            <button class="btn btn-icon" style="width:25px; height:25px; font-size:0.9rem; background: var(--warning-color);" onclick="editWorkflow(${item.id})"><i class='bx bx-edit'></i></button>
+                            <button class="btn btn-icon" style="width:25px; height:25px; font-size:0.9rem; background: var(--danger-color);" onclick="deleteWorkflow(${item.id})"><i class='bx bx-trash'></i></button>
+                        </div>
+                    </div>
+                    <p class="subtitle mt-3"><i class='bx bx-calendar'></i> ${item.date}</p>
+                </div>
+            </div>
+        `;
+    });
+}
+
+let activeWorkflowId = null;
+
+function editWorkflow(id) {
+    activeWorkflowId = id;
+    const item = currentState.workflow.find(w => w.id === id);
+    if (!item) return;
+
+    document.getElementById('wf-step').value = item.step;
+    document.getElementById('wf-date').value = item.date;
+    document.getElementById('wf-status').value = item.status;
+    openModal('add-workflow-modal');
+}
+
+function deleteWorkflow(id) {
+    if (confirm("คุณต้องการขั้นตอนงานนี้ใช่ไหม?")) {
+        currentState.workflow = currentState.workflow.filter(w => w.id !== id);
+        renderWorkflow();
+    }
+}
+
+function openAddWorkflowModal() {
+    activeWorkflowId = null;
+    document.getElementById('wf-step').value = '';
+    document.getElementById('wf-date').value = '';
+    document.getElementById('wf-status').value = 'pending';
+    openModal('add-workflow-modal');
+}
+
+function saveWorkflow() {
+    const step = document.getElementById('wf-step').value;
+    const date = document.getElementById('wf-date').value || "ไม่ระบุ";
+    const status = document.getElementById('wf-status').value;
+
+    if (!step) return alert("กรุณาใส่ชื่อกระบวนการ");
+
+    if (activeWorkflowId) {
+        const item = currentState.workflow.find(w => w.id === activeWorkflowId);
+        if (item) {
+            item.step = step;
+            item.date = date;
+            item.status = status;
+        }
+        activeWorkflowId = null;
+    } else {
+        currentState.workflow.push({
+            id: Date.now(),
+            step,
+            date,
+            status
+        });
+    }
+
+    renderWorkflow();
+    closeModal('add-workflow-modal');
+}
+
+// --- TIMER FUNCTIONALITY ---
+function formatTime(totalSeconds) {
+    const h = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
+    const m = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+    const s = (totalSeconds % 60).toString().padStart(2, '0');
+    return `${h}:${m}:${s}`;
+}
+
+function updateTimerDisplay() {
+    document.getElementById('timer-display').textContent = formatTime(currentState.timer.seconds);
+    document.getElementById('total-time-today').textContent = formatTime(currentState.timer.seconds);
+}
+
+function startTimer() {
+    if (currentState.timer.isRunning) return;
+
+    currentState.timer.isRunning = true;
+    currentState.timer.startTime = new Date();
+
+    document.getElementById('btn-start-time').style.display = 'none';
+    document.getElementById('btn-stop-time').style.display = 'inline-flex';
+    document.getElementById('timer-status').textContent = 'กำลังทำงาน...';
+    document.getElementById('timer-status').style.color = 'var(--success-color)';
+
+    currentState.timer.interval = setInterval(() => {
+        currentState.timer.seconds++;
+        updateTimerDisplay();
+    }, 1000);
+}
+
+function stopTimer() {
+    if (!currentState.timer.isRunning) return;
+
+    clearInterval(currentState.timer.interval);
+    currentState.timer.isRunning = false;
+
+    document.getElementById('btn-start-time').style.display = 'inline-flex';
+    document.getElementById('btn-stop-time').style.display = 'none';
+    document.getElementById('timer-status').textContent = 'พักงาน';
+    document.getElementById('timer-status').style.color = 'var(--warning-color)';
+
+    const endTime = new Date();
+    const durationStr = formatTime(currentState.timer.seconds);
+
+    currentState.timeLogs.unshift({
+        id: Date.now(),
+        date: endTime.toLocaleDateString('th-TH'),
+        timeStr: `${currentState.timer.startTime.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} - ${endTime.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}`,
+        duration: durationStr
+    });
+
+    renderTimeLogs();
+}
+
+function renderTimeLogs() {
+    const list = document.getElementById('time-log-list');
+    list.innerHTML = '';
+
+    if (currentState.timeLogs.length === 0) {
+        list.innerHTML = `<p class="subtitle" style="text-align:center;">ยังไม่มีบันทึกการทำงาน</p>`;
+        return;
+    }
+
+    currentState.timeLogs.forEach(log => {
+        list.innerHTML += `
+            <div class="flex-item-list">
+                <div class="item-details">
+                    <h4>กะงาน: ${log.date}</h4>
+                    <div class="item-meta">
+                        <i class='bx bx-time'></i> ${log.timeStr}
+                    </div>
+                </div>
+                <div class="item-price" style="color: var(--text-primary); font-size: 1rem;">${log.duration}</div>
+            </div>
+        `;
+    });
+}
+
+// --- ATTENDANCE FUNCTIONALITY ---
+function renderWorkers() {
+    const list = document.getElementById('worker-list');
+    if (!list) return;
+    list.innerHTML = '';
+
+    if (currentState.workers.length === 0) {
+        list.innerHTML = `<p style="text-align:center; color: var(--text-secondary); margin-top:2rem;">ยังไม่มีรายชื่อพนักงาน</p>`;
+        return;
+    }
+
+    currentState.workers.forEach(worker => {
+        let netPayable = worker.accumulatedWage - worker.advancePayment;
+
+        list.innerHTML += `
+            <div class="flex-item-list" style="flex-direction: column; align-items: stretch; gap: 0.75rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <div class="stat-icon" style="width: 40px; height: 40px; font-size: 1.25rem; margin: 0; background: rgba(59, 130, 246, 0.1); color: var(--primary-color);">
+                            <i class='bx bxs-user'></i>
+                        </div>
+                        <div class="item-details">
+                            <h4 style="margin: 0;">${worker.name}</h4>
+                            <div class="item-meta" style="margin-top: 0.25rem;">
+                                ${worker.role} | ล่าสุด: ฿${worker.wage}
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="switch">
+                            <input type="checkbox" ${worker.isPresent ? 'checked' : ''} onchange="togglePresence(${worker.id})">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Wage Financials -->
+                <div style="background: rgba(0,0,0,0.2); padding: 0.75rem; border-radius: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.85rem;">
+                    <div>ยอดสะสม: <strong style="color: var(--success-color);">฿${worker.accumulatedWage}</strong></div>
+                    <div>เบิกล่วงหน้า: <strong style="color: var(--danger-color);">฿${worker.advancePayment}</strong></div>
+                    <div style="grid-column: span 2; display: flex; justify-content: space-between; align-items: center; margin-top: 0.25rem; padding-top: 0.5rem; border-top: 1px dashed rgba(255,255,255,0.1);">
+                        <span>คงเหลือสุทธิ: <strong style="font-size: 1.1rem; color: var(--text-primary);">฿${netPayable}</strong></span>
+                        <button class="btn btn-icon" style="width:30px; height:30px; font-size: 1rem; background: var(--warning-color);" onclick="openAdvanceModal(${worker.id}, '${worker.name}')">
+                            <i class='bx bx-edit-alt'></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+}
+
+function togglePresence(id) {
+    const worker = currentState.workers.find(w => w.id === id);
+    if (worker) {
+        worker.isPresent = !worker.isPresent;
+    }
+}
+
+function addWorker() {
+    const name = document.getElementById('worker-name').value;
+    const role = document.getElementById('worker-role').value;
+    const wage = document.getElementById('worker-wage').value;
+
+    if (!name) return alert("กรุณาใส่ชื่อพนักงาน");
+
+    currentState.workers.push({
+        id: Date.now(),
+        name,
+        role: role || "ทั่วไป",
+        wage: wage ? parseFloat(wage) : 350,
+        isPresent: true,
+        accumulatedWage: 0,
+        advancePayment: 0
+    });
+
+    renderWorkers();
+    closeModal('add-worker-modal');
+}
+
+let activeWorkerId = null;
+
+function openAdvanceModal(id, name) {
+    activeWorkerId = id;
+    const worker = currentState.workers.find(w => w.id === id);
+    if (!worker) return;
+
+    document.getElementById('edit-worker-name').textContent = name;
+    document.getElementById('edit-accumulated').value = worker.accumulatedWage;
+    document.getElementById('edit-advance').value = worker.advancePayment;
+
+    openModal('edit-wage-modal');
+}
+
+function saveWorkerFinancials() {
+    if (!activeWorkerId) return;
+
+    const worker = currentState.workers.find(w => w.id === activeWorkerId);
+    if (!worker) return;
+
+    worker.accumulatedWage = parseFloat(document.getElementById('edit-accumulated').value) || 0;
+    worker.advancePayment = parseFloat(document.getElementById('edit-advance').value) || 0;
+
+    renderWorkers();
+    closeModal('edit-wage-modal');
+}
+
+function checkoutWorkersDay() {
+    // Add today's wage to accumulated wage for present workers
+    let count = 0;
+    currentState.workers.forEach(w => {
+        if (w.isPresent) {
+            w.accumulatedWage += w.wage;
+            w.isPresent = false; // reset for next day
+            count++;
+        }
+    });
+
+    alert(`บันทึกยอดรายวันสำเร็จ (${count} คน)\nระบบได้นำค่าแรงไปทบยอดสะสมและล้างสถานะเข้างานสำหรับวันพรุ่งนี้แล้ว`);
+    renderWorkers();
+}
+
+function clearWageCycle() {
+    if (confirm('คุณต้องการจ่ายเงินและล้างยอดสะสม (รอบ 15 วัน) ใช่หรือไม่?\nยอดสะสมและเบิกล่วงหน้าจะกลับเป็น 0')) {
+        currentState.workers.forEach(w => {
+            w.accumulatedWage = 0;
+            w.advancePayment = 0;
+        });
+        renderWorkers();
+        alert('ล้างรอบบิลค่าแรงเรียบร้อยแล้ว');
+    }
+}
+
+function calculateWages() {
+    let totalWages = 0;
+    let presentCount = 0;
+
+    let reportHtml = `<div style="text-align: left; font-size: 0.95rem;">`;
+
+    currentState.workers.forEach(w => {
+        if (w.isPresent) {
+            totalWages += w.wage;
+            presentCount++;
+            reportHtml += `
+            <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 0.25rem;">
+                <span><i class='bx bx-check' style="color:var(--success-color);"></i> ${w.name} (${w.role})</span>
+                <span style="color:var(--primary-color);">฿${w.wage}</span>
+            </div>`;
+        }
+    });
+
+    reportHtml += `
+        <div style="display:flex; justify-content:space-between; margin-top: 1rem; font-weight: bold; font-size: 1.1rem;">
+            <span>รวมค่าแรงวันนี้ (${presentCount} คน):</span>
+            <span style="color:var(--danger-color);">฿${totalWages.toLocaleString()}</span>
+        </div>
+        <div style="margin-top: 1.5rem;">
+            <button class="btn btn-success w-100" onclick="checkoutWorkersDay(); closeModal('wage-report-modal');">
+                <i class='bx bx-check-double'></i> ยืนยันจบวัน (ทบยอดสะสม)
+            </button>
+        </div>
+    </div>`;
+
+    document.getElementById('wage-report-content').innerHTML = presentCount > 0 ? reportHtml : "<p>ไม่มีพนักงานเข้างานวันนี้</p>";
+    openModal('wage-report-modal');
+}
+
+// --- PRINT FUNCTIONALITY ---
+function printGroupReport() {
+    const printArea = document.getElementById('print-area');
+    const dateStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    let html = `
+        <h2 class="text-center" style="margin-bottom: 5px;">รายงานสรุปค่าแรงทีมงาน</h2>
+        <p class="text-center" style="margin-bottom: 20px;">วันที่พิมพ์: ${dateStr}</p>
+        <table class="print-table">
+            <thead>
+                <tr>
+                    <th>ลำดับ</th>
+                    <th>ชื่อ - นามสกุล</th>
+                    <th>ตำแหน่ง</th>
+                    <th class="text-right">ค่าแรงต่อวัน</th>
+                    <th class="text-right">สะสมทั้งหมด</th>
+                    <th class="text-right">เบิกล่วงหน้า</th>
+                    <th class="text-right">คงเหลือสุทธิ</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    let totalAccumulated = 0;
+    let totalAdvance = 0;
+    let totalNet = 0;
+
+    currentState.workers.forEach((w, index) => {
+        const net = w.accumulatedWage - w.advancePayment;
+        totalAccumulated += w.accumulatedWage;
+        totalAdvance += w.advancePayment;
+        totalNet += net;
+
+        html += `
+            <tr>
+                <td class="text-center">${index + 1}</td>
+                <td>${w.name}</td>
+                <td>${w.role}</td>
+                <td class="text-right">${w.wage.toLocaleString()}</td>
+                <td class="text-right">${w.accumulatedWage.toLocaleString()}</td>
+                <td class="text-right">${w.advancePayment.toLocaleString()}</td>
+                <td class="text-right"><strong>${net.toLocaleString()}</strong></td>
+            </tr>
+        `;
+    });
+
+    html += `
+            </tbody>
+            <tfoot>
+                <tr style="background-color:#f8f8f8; font-weight:bold;">
+                    <td colspan="4" class="text-right">รวมทั้งสิ้น</td>
+                    <td class="text-right">${totalAccumulated.toLocaleString()}</td>
+                    <td class="text-right">${totalAdvance.toLocaleString()}</td>
+                    <td class="text-right">${totalNet.toLocaleString()}</td>
+                </tr>
+            </tfoot>
+        </table>
+        <div style="margin-top: 50px; display: flex; justify-content: space-around;">
+            <div style="text-align: center;">
+                <p>ลงชื่อ................................................ผู้ตรวจทาน</p>
+                <p style="margin-top: 10px;">(..........................................................)</p>
+            </div>
+        </div>
+    `;
+
+    printArea.innerHTML = html;
+    window.print();
+}
+
+function printIndividualReport() {
+    if (!activeWorkerId) return;
+    const worker = currentState.workers.find(w => w.id === activeWorkerId);
+    if (!worker) return;
+
+    // Save current values if edited before printing
+    saveWorkerFinancials();
+
+    const net = worker.accumulatedWage - worker.advancePayment;
+    const printArea = document.getElementById('print-area');
+    const dateStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    let html = `
+        <div style="max-width: 600px; margin: 0 auto; border: 1px solid #ccc; padding: 20px;">
+            <h2 class="text-center" style="margin-bottom: 5px;">ใบรับเงิน / แจ้งยอดค่าแรง</h2>
+            <p class="text-center" style="margin-bottom: 20px;">วันที่พิมพ์: ${dateStr}</p>
+            
+            <div style="margin-bottom: 20px;">
+                <p><strong>ชื่อ-นามสกุลพนักงาน:</strong> ${worker.name}</p>
+                <p><strong>ตำแหน่ง:</strong> ${worker.role}</p>
+                <p><strong>ค่าแรงต่อวัน:</strong> ฿${worker.wage.toLocaleString()}</p>
+            </div>
+
+            <table class="print-table">
+                <thead>
+                    <tr>
+                        <th>รายการ</th>
+                        <th class="text-right">จำนวนเงิน (บาท)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>ค่าแรงสะสมรวม</td>
+                        <td class="text-right">${worker.accumulatedWage.toLocaleString()}</td>
+                    </tr>
+                    <tr>
+                        <td>หัก เบิกล่วงหน้า</td>
+                        <td class="text-right" style="color: red;">-${worker.advancePayment.toLocaleString()}</td>
+                    </tr>
+                    <tr style="font-size: 1.2rem; font-weight: bold;">
+                        <td>ยอดคงเหลือจ่ายจริงสุทธิ</td>
+                        <td class="text-right">${net.toLocaleString()}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div style="margin-top: 60px; display: flex; justify-content: space-between;">
+                <div style="text-align: center; width: 45%;">
+                    <p>ลงชื่อ................................................ผู้จ่ายเงิน</p>
+                    <p style="margin-top: 10px;">(..........................................................)</p>
+                </div>
+                <div style="text-align: center; width: 45%;">
+                    <p>ลงชื่อ................................................ผู้รับเงิน</p>
+                    <p style="margin-top: 10px;">(${worker.name})</p>
+                </div>
+            </div>
+        </div>
+    `;
+
+    printArea.innerHTML = html;
+    window.print();
+}
+
+// --- COMPARE FUNCTIONALITY ---
+function updateCompareTitle() {
+    const name = document.getElementById('compare-name').value || 'สินค้า';
+    // optionally can show dynamic title
+}
+
+function calculateCompare() {
+    // Store A
+    const priceA = parseFloat(document.getElementById('store-a-price').value) || 0;
+    const qtyA = parseFloat(document.getElementById('store-a-qty').value) || 0;
+    const nameA = document.getElementById('store-a-name').value || 'ร้าน A';
+    const unitA = document.getElementById('store-a-unit').value || 'หน่วย';
+
+    // Store B
+    const priceB = parseFloat(document.getElementById('store-b-price').value) || 0;
+    const qtyB = parseFloat(document.getElementById('store-b-qty').value) || 0;
+    const nameB = document.getElementById('store-b-name').value || 'ร้าน B';
+    const unitB = document.getElementById('store-b-unit').value || 'หน่วย';
+
+    const resultDiv = document.getElementById('compare-result');
+    const detailsDiv = document.getElementById('compare-details');
+
+    if (priceA > 0 && qtyA > 0 && priceB > 0 && qtyB > 0) {
+        const costPerUnitA = priceA / qtyA;
+        const costPerUnitB = priceB / qtyB;
+
+        let bestStore = '';
+        let bestPrice = 0;
+        let diffPercent = 0;
+        let diffValue = 0;
+
+        let html = `
+            <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem; padding-bottom: 0.5rem; border-bottom: 1px dashed rgba(255,255,255,0.2);">
+                <span>${nameA}</span>
+                <strong style="color:var(--primary-color);">฿${costPerUnitA.toFixed(2)} / ${unitA}</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:1rem; padding-bottom: 0.5rem; border-bottom: 1px dashed rgba(255,255,255,0.2);">
+                <span>${nameB}</span>
+                <strong style="color:var(--success-color);">฿${costPerUnitB.toFixed(2)} / ${unitB}</strong>
+            </div>
+        `;
+
+        if (costPerUnitA < costPerUnitB) {
+            diffValue = costPerUnitB - costPerUnitA;
+            diffPercent = (diffValue / costPerUnitB) * 100;
+            html += `<div style="font-weight:bold; color:var(--success-color);"><i class='bx bx-check-circle'></i> ${nameA} ประหยัดกว่า ${diffPercent.toFixed(1)}%</div>`;
+            bestStore = nameA;
+            bestPrice = priceA;
+        } else if (costPerUnitB < costPerUnitA) {
+            diffValue = costPerUnitA - costPerUnitB;
+            diffPercent = (diffValue / costPerUnitA) * 100;
+            html += `<div style="font-weight:bold; color:var(--success-color);"><i class='bx bx-check-circle'></i> ${nameB} ประหยัดกว่า ${diffPercent.toFixed(1)}%</div>`;
+            bestStore = nameB;
+            bestPrice = priceB;
+        } else {
+            html += `<div style="font-weight:bold; color:var(--text-primary);"><i class='bx bx-minus-circle'></i> ทั้งสองร้านราคาต่อหน่วยเท่ากัน</div>`;
+            bestStore = nameA;
+            bestPrice = priceA;
+        }
+
+        currentState.compareResult = {
+            storeName: bestStore,
+            price: bestPrice,
+            productName: document.getElementById('compare-name').value || 'สินค้าจากการเปรียบเทียบ'
+        };
+
+        detailsDiv.innerHTML = html;
+        resultDiv.style.display = 'block';
+    } else {
+        resultDiv.style.display = 'none';
+        currentState.compareResult = null;
+    }
+}
+
+function saveToMaterialsFromCompare() {
+    if (currentState.compareResult) {
+        currentState.materials.push({
+            id: Date.now(),
+            name: currentState.compareResult.productName,
+            price: currentState.compareResult.price,
+            location: currentState.compareResult.storeName
+        });
+
+        // Notify user and navigate
+        alert('บันทึกลงรายการ "ซื้อของ" เรียบร้อยแล้ว!');
+        renderMaterials();
+        navigate('materials', document.querySelector('.nav-item[onclick*="materials"]'));
+    }
+}

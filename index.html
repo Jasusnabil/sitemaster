@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SiteMaster - ระบบจัดการงานก่อสร้าง</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="glass-header">
+            <div>
+                <h1 id="page-title">ภาพรวมงาน</h1>
+                <p class="subtitle" id="current-date"></p>
+            </div>
+            <div class="profile-pic">
+                <i class='bx bxs-user-circle'></i>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main id="main-content">
+            <!-- Home View -->
+            <section id="view-home" class="view active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: rgba(16, 185, 129, 0.2); color: #10b981;"><i
+                                class='bx bx-time-five'></i></div>
+                        <h3>เวลาทำงานวันนี้</h3>
+                        <p id="total-time-today">00:00:00</p>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: rgba(59, 130, 246, 0.2); color: #3b82f6;"><i
+                                class='bx bx-task'></i></div>
+                        <h3>งานรอประมวล</h3>
+                        <p>3 รายการ</p>
+                    </div>
+                </div>
+
+                <h2 class="section-title">งานด่วนที่กำลังทำ</h2>
+                <div class="card active-task-card">
+                    <div class="task-header">
+                        <span class="badge badge-primary">ทำรั้วบ้าน</span>
+                        <span class="status-dot pulsing"></span>
+                    </div>
+                    <h3>ขึ้นโครงเหล็กและเทปูน</h3>
+                    <p>สถานที่: ไซต์งาน A</p>
+                    <button class="btn btn-primary mt-3" onclick="navigate('time')">ลงเวลาทำงาน</button>
+                </div>
+            </section>
+
+            <!-- Materials View -->
+            <section id="view-materials" class="view">
+                <div class="flex-between">
+                    <h2 class="section-title">รายการจัดซื้อ</h2>
+                    <button class="btn btn-icon" onclick="openModal('add-material-modal')"><i
+                            class='bx bx-plus'></i></button>
+                </div>
+
+                <div class="material-list" id="material-list">
+                    <!-- Items dynamically added -->
+                </div>
+            </section>
+
+            <!-- Workflow View -->
+            <section id="view-workflow" class="view">
+                <div class="flex-between">
+                    <h2 class="section-title">กระบวนการทำงาน</h2>
+                    <button class="btn btn-icon" onclick="openAddWorkflowModal()"><i class='bx bx-plus'></i></button>
+                </div>
+                <div class="timeline" id="workflow-list" style="margin-top: 1rem;">
+                    <!-- Items dynamically added -->
+                </div>
+            </section>
+
+            <!-- Time View -->
+            <section id="view-time" class="view">
+                <div class="time-logger-container card">
+                    <div class="timer-display" id="timer-display">00:00:00</div>
+                    <p class="timer-status" id="timer-status">พร้อมเริ่มงาน</p>
+                    <div class="timer-controls">
+                        <button class="btn btn-large btn-success" id="btn-start-time" onclick="startTimer()"><i
+                                class='bx bx-play'></i> เริ่มงาน</button>
+                        <button class="btn btn-large btn-danger" id="btn-stop-time" onclick="stopTimer()"
+                            style="display: none;"><i class='bx bx-stop'></i> เลิกงาน</button>
+                    </div>
+                </div>
+
+                <h2 class="section-title mt-4">บันทึกการทำงานล่าสุด</h2>
+                <div class="log-list" id="time-log-list">
+                    <!-- Logs dynamically added -->
+                </div>
+            </section>
+
+            <!-- Attendance View -->
+            <section id="view-attendance" class="view">
+                <div class="flex-between">
+                    <h2 class="section-title">เช็คชื่อทีมงาน</h2>
+                    <button class="btn btn-icon" onclick="openModal('add-worker-modal')"><i
+                            class='bx bx-user-plus'></i></button>
+                </div>
+
+                <div class="worker-list" id="worker-list" style="margin-top: 1rem;">
+                    <!-- Items dynamically added -->
+                </div>
+
+                <div style="margin-top: 1.5rem; display: flex; gap: 0.5rem;">
+                    <button class="btn btn-warning" style="flex: 1; background: var(--warning-color); color: white;"
+                        onclick="calculateWages()">
+                        <i class='bx bx-receipt'></i> สรุปรายวัน
+                    </button>
+                    <button class="btn btn-primary" style="flex: 1; background: #8b5cf6;" onclick="printGroupReport()">
+                        <i class='bx bx-printer'></i> พิมพ์รายงานกลุ่ม
+                    </button>
+                    <button class="btn btn-danger" style="flex: 1;" onclick="clearWageCycle()">
+                        <i class='bx bx-reset'></i> ตัดวิค
+                    </button>
+                </div>
+            </section>
+
+            <!-- Compare View -->
+            <section id="view-compare" class="view">
+                <h2 class="section-title">เปรียบเทียบราคาสินค้า</h2>
+                <div class="card" style="margin-bottom: 1.5rem;">
+                    <div class="form-group">
+                        <label>ชื่อสินค้าที่จะเปรียบเทียบ</label>
+                        <input type="text" id="compare-name" placeholder="เช่น หินคลุก / ทราย"
+                            oninput="updateCompareTitle()">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                    <!-- Store A -->
+                    <div class="card" style="padding: 1rem; border-color: rgba(59, 130, 246, 0.4);">
+                        <h4 style="margin-bottom: 0.5rem; color: var(--primary-color);"><i class='bx bx-store'></i> ร้าน
+                            A</h4>
+                        <div class="form-group">
+                            <label>ชื่อร้าน</label>
+                            <input type="text" id="store-a-name" placeholder="ชื่อร้าน A">
+                        </div>
+                        <div class="form-group">
+                            <label>ราคาบรรจุภัณฑ์</label>
+                            <input type="number" id="store-a-price" placeholder="ราคา (บาท)"
+                                oninput="calculateCompare()">
+                        </div>
+                        <div class="form-group">
+                            <label>ปริมาณ / น้ำหนัก</label>
+                            <input type="number" id="store-a-qty" placeholder="จำนวน" oninput="calculateCompare()">
+                        </div>
+                        <div class="form-group">
+                            <label>หน่วย (เช่น กก., ลิตร)</label>
+                            <input type="text" id="store-a-unit" placeholder="หน่วย" oninput="calculateCompare()">
+                        </div>
+                    </div>
+                    <!-- Store B -->
+                    <div class="card" style="padding: 1rem; border-color: rgba(16, 185, 129, 0.4);">
+                        <h4 style="margin-bottom: 0.5rem; color: var(--success-color);"><i class='bx bx-store'></i> ร้าน
+                            B</h4>
+                        <div class="form-group">
+                            <label>ชื่อร้าน</label>
+                            <input type="text" id="store-b-name" placeholder="ชื่อร้าน B">
+                        </div>
+                        <div class="form-group">
+                            <label>ราคาบรรจุภัณฑ์</label>
+                            <input type="number" id="store-b-price" placeholder="ราคา (บาท)"
+                                oninput="calculateCompare()">
+                        </div>
+                        <div class="form-group">
+                            <label>ปริมาณ / น้ำหนัก</label>
+                            <input type="number" id="store-b-qty" placeholder="จำนวน" oninput="calculateCompare()">
+                        </div>
+                        <div class="form-group">
+                            <label>หน่วย</label>
+                            <input type="text" id="store-b-unit" placeholder="หน่วย" oninput="calculateCompare()">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" id="compare-result"
+                    style="display: none; border: 2px solid var(--warning-color); background: rgba(245, 158, 11, 0.1);">
+                    <h3 style="text-align: center; margin-bottom: 1rem; color: var(--warning-color);">
+                        ผลลัพธ์การเปรียบเทียบ</h3>
+                    <div id="compare-details" style="text-align: center; font-size: 1.1rem; margin-bottom: 1rem;">
+                        <!-- dynamic summary -->
+                    </div>
+                    <button class="btn btn-primary w-100"
+                        onclick="saveToMaterialsFromCompare()">บันทึกตัวเลือกที่คุ้มกว่าลง 'ซื้อของ'</button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav glass-nav">
+            <a href="#" class="nav-item active" onclick="navigate('home', this)">
+                <i class='bx bx-home-alt'></i>
+                <span>หน้าแรก</span>
+            </a>
+            <a href="#" class="nav-item" onclick="navigate('materials', this)">
+                <i class='bx bx-cart'></i>
+                <span>ซื้อของ</span>
+            </a>
+            <a href="#" class="nav-item" onclick="navigate('workflow', this)">
+                <i class='bx bx-git-pull-request'></i>
+                <span>กระบวนการ</span>
+            </a>
+            <a href="#" class="nav-item" onclick="navigate('time', this)">
+                <i class='bx bx-timer'></i>
+                <span>เวลา</span>
+            </a>
+            <a href="#" class="nav-item" onclick="navigate('attendance', this)">
+                <i class='bx bx-group'></i>
+                <span>พนักงาน</span>
+            </a>
+            <a href="#" class="nav-item" onclick="navigate('compare', this)">
+                <i class='bx bx-abacus'></i>
+                <span>เทียบราคา</span>
+            </a>
+        </nav>
+
+        <!-- Modals -->
+        <div id="add-worker-modal" class="modal">
+            <div class="modal-content card">
+                <div class="modal-header">
+                    <h3>เพิ่มรายชื่อพนักงาน</h3>
+                    <button class="close-btn" onclick="closeModal('add-worker-modal')"><i class='bx bx-x'></i></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>ชื่อพนักงาน</label>
+                        <input type="text" id="worker-name" placeholder="เช่น สมชาย ใจดี">
+                    </div>
+                    <div class="form-group">
+                        <label>ตำแหน่ง / หน้าที่</label>
+                        <input type="text" id="worker-role" placeholder="เช่น ช่างปูน">
+                    </div>
+                    <div class="form-group">
+                        <label>ค่าแรงต่อวัน (บาท)</label>
+                        <input type="number" id="worker-wage" placeholder="เช่น 450">
+                    </div>
+                    <button class="btn btn-primary w-100" onclick="addWorker()">บันทึกรายชื่อ</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="edit-wage-modal" class="modal">
+            <div class="modal-content card">
+                <div class="modal-header">
+                    <h3>แก้ไขยอดเงิน <span id="edit-worker-name" style="color:var(--primary-color);"></span></h3>
+                    <button class="close-btn" onclick="closeModal('edit-wage-modal')"><i class='bx bx-x'></i></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>ยอดเงินสะสมทั้งหมด (บาท)</label>
+                        <input type="number" id="edit-accumulated" placeholder="เช่น 2400">
+                    </div>
+                    <div class="form-group">
+                        <label>เบิกเงินไปแล้ว / เบิกล่วงหน้า (บาท)</label>
+                        <input type="number" id="edit-advance" placeholder="เช่น 500">
+                    </div>
+                    <div style="display:flex; gap:0.5rem; margin-top: 1rem;">
+                        <button class="btn btn-warning" style="flex: 1; color:white;"
+                            onclick="saveWorkerFinancials()">บันทึก</button>
+                        <button class="btn btn-primary" style="flex: 1; background: #8b5cf6;"
+                            onclick="printIndividualReport()"><i class='bx bx-printer'></i> พิมพ์ใบเสร็จ</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="wage-report-modal" class="modal">
+            <div class="modal-content card" style="border-color: var(--warning-color);">
+                <div class="modal-header">
+                    <h3><i class='bx bx-receipt' style="color:var(--warning-color);"></i> สรุปค่าแรงประจำวัน</h3>
+                    <button class="close-btn" onclick="closeModal('wage-report-modal')"><i class='bx bx-x'></i></button>
+                </div>
+                <div class="modal-body" id="wage-report-content">
+                    <!-- dynamically generated summary -->
+                </div>
+                <div style="margin-top: 1rem;">
+                    <button class="btn btn-primary w-100" onclick="closeModal('wage-report-modal')">ปิดหน้าต่าง</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="add-material-modal" class="modal">
+            <div class="modal-content card">
+                <div class="modal-header">
+                    <h3>เพิ่มรายการซื้อของ</h3>
+                    <button class="close-btn" onclick="closeModal('add-material-modal')"><i
+                            class='bx bx-x'></i></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>ชื่อวัสดุ / อุปกรณ์</label>
+                        <input type="text" id="mat-name" placeholder="เช่น ปูนซีเมนต์ 1 ถุง">
+                    </div>
+                    <div class="form-group">
+                        <label>ราคาโดยประมาณ (บาท)</label>
+                        <input type="number" id="mat-price" placeholder="เช่น 150">
+                    </div>
+                    <div class="form-group">
+                        <label>สถานที่ซื้อ / ร้านค้า</label>
+                        <input type="text" id="mat-location" placeholder="เช่น ไทวัสดุ สาขา...">
+                    </div>
+                    <button class="btn btn-primary w-100" onclick="addMaterial()">บันทึกรายการ</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="add-workflow-modal" class="modal">
+            <div class="modal-content card">
+                <div class="modal-header">
+                    <h3>จัดการกระบวนการ</h3>
+                    <button class="close-btn" onclick="closeModal('add-workflow-modal')"><i
+                            class='bx bx-x'></i></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>ชื่องาน / กระบวนการ</label>
+                        <input type="text" id="wf-step" placeholder="เช่น เทปูน">
+                    </div>
+                    <div class="form-group">
+                        <label>วันที่ดำเนินการ</label>
+                        <input type="text" id="wf-date" placeholder="เช่น 24 พ.ย. หรือ วันนี้">
+                    </div>
+                    <div class="form-group">
+                        <label>สถานะงาน</label>
+                        <select id="wf-status"
+                            style="width: 100%; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0, 0, 0, 0.2); color: white; font-size: 1rem; cursor:pointer; outline:none;">
+                            <option style="color:black;" value="pending">รอดำเนินการ</option>
+                            <option style="color:black;" value="active">กำลังทำ</option>
+                            <option style="color:black;" value="completed">เสร็จสิ้น</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary w-100" style="margin-top:1rem;"
+                        onclick="saveWorkflow()">บันทึกงาน</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Print Area -->
+    <div id="print-area"></div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
