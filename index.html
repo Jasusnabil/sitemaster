@@ -392,9 +392,13 @@
                         <input type="text" id="mat-location" placeholder="เช่น ไทวัสดุ สาขา...">
                     </div>
                     <div class="form-group">
-                        <label>แนบรูปถ่าย (ถ้ามี)</label>
-                        <input type="file" id="mat-image" accept="image/*"
+                        <label>แนบรูปถ่าย / เปิดกล้อง</label>
+                        <input type="file" id="mat-image" accept="image/*" capture="environment"
+                            onchange="handleImagePreview(event, 'mat-preview-container')"
                             style="width: 100%; padding: 0.5rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0, 0, 0, 0.2); color: white;">
+                    </div>
+                    <div id="mat-preview-container" style="margin-bottom: 1rem; display: none; position: relative;">
+                        <!-- Preview will appear here -->
                     </div>
                     <button class="btn btn-primary w-100" onclick="addMaterial()">บันทึกรายการ</button>
                 </div>
@@ -426,10 +430,28 @@
                             <option style="color:black;" value="completed">เสร็จสิ้น</option>
                         </select>
                     </div>
+                    <div class="form-group"
+                        style="padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 12px; border: 1px solid var(--glass-border);">
+                        <label style="color: var(--warning-color); font-weight: 600;"><i class='bx bx-list-check'></i>
+                            รายการย่อย (Sub-tasks)</label>
+                        <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <input type="text" id="subtask-input" placeholder="เช่น ขุดหลุม, วางเหล็ก..."
+                                style="flex: 1;">
+                            <button class="btn btn-warning" onclick="addSubTask()"
+                                style="padding: 0.5rem 1rem; color: white;"><i class='bx bx-plus'></i></button>
+                        </div>
+                        <div id="subtask-list-modal" style="max-height: 150px; overflow-y: auto;">
+                            <!-- Temp subtasks will appear here -->
+                        </div>
+                    </div>
                     <div class="form-group">
-                        <label>แนบรูปถ่าย (ถ้ามี)</label>
-                        <input type="file" id="wf-image" accept="image/*"
+                        <label>แนบรูปถ่าย / เปิดกล้อง</label>
+                        <input type="file" id="wf-image" accept="image/*" capture="environment"
+                            onchange="handleImagePreview(event, 'wf-preview-container')"
                             style="width: 100%; padding: 0.5rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0, 0, 0, 0.2); color: white;">
+                    </div>
+                    <div id="wf-preview-container" style="margin-bottom: 1rem; display: none; position: relative;">
+                        <!-- Preview will appear here -->
                     </div>
                     <button class="btn btn-primary w-100" style="margin-top:1rem;"
                         onclick="saveWorkflow()">บันทึกงาน</button>

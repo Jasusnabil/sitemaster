@@ -1,16 +1,7 @@
 // --- STATE ---
 let currentState = {
-    materials: [
-        { id: 1, name: "ปูนซีเมนต์ (เสือ)", price: 145, location: "ไทวัสดุ พระราม 2" },
-        { id: 2, name: "เหล็กกล่อง 1x1", price: 350, location: "Global House" }
-    ],
-    workflow: [
-        { id: 1, step: "วัดพื้นที่และตีเส้น", date: "20 พ.ย.", status: "completed" },
-        { id: 2, step: "ขุดหลุมลงเสาเข็ม", date: "21 พ.ย.", status: "completed" },
-        { id: 3, step: "ขึ้นโครงเหล็กและเทปูน", date: "วันนี้", status: "active" },
-        { id: 4, step: "ก่ออิฐ/ติดตะแกรงรั้ว", date: "รอดำเนินการ", status: "pending" },
-        { id: 5, step: "ทาสีและเก็บงาน", date: "รอดำเนินการ", status: "pending" }
-    ],
+    materials: [],
+    workflow: [],
     timeLogs: [],
     timer: {
         isRunning: false,
@@ -18,11 +9,7 @@ let currentState = {
         interval: null,
         startTime: null
     },
-    workers: [
-        { id: 1, name: "สมชาย ใจดี", role: "หัวหน้าช่าง", wage: 600, isPresent: true, accumulatedWage: 1200, advancePayment: 500 },
-        { id: 2, name: "สมหญิง รักงาน", role: "ช่างปูน", wage: 450, isPresent: true, accumulatedWage: 900, advancePayment: 0 },
-        { id: 3, name: "บุญมี แข็งขัน", role: "ผู้ช่วยช่าง", wage: 350, isPresent: false, accumulatedWage: 700, advancePayment: 200 }
-    ],
+    workers: [],
     compareResult: null
 };
 
@@ -172,6 +159,19 @@ function closeModal(id) {
     document.getElementById(id).classList.remove('active');
     const inputs = document.getElementById(id).querySelectorAll('input');
     inputs.forEach(input => input.value = '');
+
+    // Clear image previews
+    const previews = document.getElementById(id).querySelectorAll('[id$="-preview-container"]');
+    previews.forEach(p => {
+        p.innerHTML = '';
+        p.style.display = 'none';
+    });
+
+    // Reset subtasks if it's the workflow modal
+    if (id === 'add-workflow-modal') {
+        tempSubTasks = [];
+        renderTempSubTasks();
+    }
 }
 
 let activeMaterialId = null;
@@ -185,6 +185,19 @@ function editMaterial(id) {
     document.getElementById('mat-price').value = mat.price;
     document.getElementById('mat-location').value = mat.location;
     document.getElementById('mat-image').value = ''; // Reset file input
+
+    // Load image preview if exists
+    if (mat.image) {
+        const preview = document.getElementById('mat-preview-container');
+        preview.innerHTML = `
+            <img src="${mat.image}" style="width: 100%; border-radius: 8px; border: 1px solid var(--glass-border); margin-top: 10px;">
+            <button onclick="clearImagePreview('mat-image', 'mat-preview-container')" style="position: absolute; top: 20px; right: 10px; background: var(--danger-color); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">
+                <i class='bx bx-trash'></i>
+            </button>
+        `;
+        preview.style.display = 'block';
+    }
+
     openModal('add-material-modal');
 }
 
@@ -211,6 +224,13 @@ async function addMaterial() {
         } catch (e) {
             console.warn("Could not read image", e);
         }
+    } else {
+        // Keep existing image if preview is still visible
+        const previewVisible = document.getElementById('mat-preview-container').style.display !== 'none';
+        if (activeMaterialId && previewVisible) {
+            const existing = currentState.materials.find(m => m.id === activeMaterialId);
+            if (existing) imageData = existing.image;
+        }
     }
 
     if (activeMaterialId) {
@@ -220,7 +240,7 @@ async function addMaterial() {
             mat.name = name;
             mat.price = price ? parseFloat(price) : 0;
             mat.location = location || "ไม่ระบุ";
-            if (imageData) mat.image = imageData;
+            mat.image = imageData;
         }
         activeMaterialId = null;
     } else {
@@ -266,6 +286,21 @@ function renderWorkflow() {
 
         let imgTag = item.image ? `<img src="${item.image}" style="width: 100%; max-height: 120px; object-fit: cover; border-radius: 6px; margin-top: 0.5rem;" alt="work photo">` : '';
 
+        let subTasksHtml = '';
+        if (item.subTasks && item.subTasks.length > 0) {
+            subTasksHtml = `<div class="subtask-timeline" style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--glass-border);">`;
+            item.subTasks.forEach((st, idx) => {
+                const isDone = st.completed ? 'checked' : '';
+                subTasksHtml += `
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem; font-size: 0.85rem; color: ${st.completed ? 'var(--success-color)' : 'var(--text-primary)'}; opacity: ${st.completed ? '0.7' : '1'};">
+                        <input type="checkbox" ${isDone} onclick="toggleSubTask(${item.id}, ${idx})" style="cursor: pointer;">
+                        <span style="${st.completed ? 'text-decoration: line-through;' : ''}">${st.text}</span>
+                    </div>
+                `;
+            });
+            subTasksHtml += `</div>`;
+        }
+
         list.innerHTML += `
             <div class="timeline-item ${item.status}">
                 <div class="timeline-dot"></div>
@@ -279,6 +314,7 @@ function renderWorkflow() {
                         </div>
                     </div>
                     <p class="subtitle mt-3"><i class='bx bx-calendar'></i> ${item.date}</p>
+                    ${subTasksHtml}
                     ${imgTag}
                 </div>
             </div>
@@ -297,6 +333,23 @@ function editWorkflow(id) {
     document.getElementById('wf-date').value = item.date;
     document.getElementById('wf-status').value = item.status;
     document.getElementById('wf-image').value = '';
+
+    // Load subtasks
+    tempSubTasks = item.subTasks ? [...item.subTasks] : [];
+    renderTempSubTasks();
+
+    // Load image preview if exists
+    if (item.image) {
+        const preview = document.getElementById('wf-preview-container');
+        preview.innerHTML = `
+            <img src="${item.image}" style="width: 100%; border-radius: 8px; border: 1px solid var(--glass-border);">
+            <button onclick="clearImagePreview('wf-image', 'wf-preview-container')" style="position: absolute; top: 10px; right: 10px; background: var(--danger-color); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">
+                <i class='bx bx-trash'></i>
+            </button>
+        `;
+        preview.style.display = 'block';
+    }
+
     openModal('add-workflow-modal');
 }
 
@@ -366,31 +419,32 @@ function applyTemplate() {
 
     if (type === 'fence') {
         const steps = [
-            '1. ตรวจสอบหลักหมุดและข้อกฎหมาย',
-            '2. ออกแบบโครงสร้างและฐานราก',
-            '3. เตรียมพื้นที่และขุดหลุมวางฐานราก',
-            '4. ติดตั้งเสารั้วและเทคานคอดิน',
-            '5. ก่อผนังรั้ว ฉาบปูน และทาสี',
-            '6. ตรวจสอบความเรียบร้อยและปรับภูมิทัศน์'
+            { step: '1. ตรวจสอบหลักหมุดและข้อกฎหมาย', subTasks: ['เช็คหลักหมุดที่ดินตามโฉนด', 'ตรวจสอบระยะร่นตามกฎหมาย', 'แจ้งเพื่อนบ้านเรื่องแนวเขต'] },
+            { step: '2. ออกแบบโครงสร้างและฐานราก', subTasks: ['กำหนดความสูงรั้ว', 'คำนวณจำนวนเสาและบล็อก', 'เลือกเกรดปูนและเหล็ก'] },
+            { step: '3. เตรียมพื้นที่และขุดหลุมวางฐานราก', subTasks: ['เคลียร์พื้นที่แนวก่อสร้าง', 'ขุดหลุมฐานราก (ฟุตติ้ง)', 'วางตะแกรงเหล็กและเทลีน'] },
+            { step: '4. ติดตั้งเสารั้วและเทคานคอดิน', subTasks: ['ตั้งระดับเสารั้ว', 'เข้าแบบเทคานคอดิน', 'ผูกเหล็กเสริมคาน'] },
+            { step: '5. ก่อผนังรั้ว ฉาบปูน และทาสี', subTasks: ['ก่อบล็อก/อิฐมอญ', 'จับเสี้ยมและฉาบเรียบ', 'ทาสีรองพื้นกันด่าง'] },
+            { step: '6. ตรวจสอบความเรียบร้อยและปรับภูมิทัศน์', subTasks: ['ตรวจสอบรอยร้าว/สี', 'เคลียร์เศษวัสดุหน้างาน', 'ปรับระดับดินรอบรั้ว'] }
         ];
 
-        let confirmMsg = confirm("ระบบจะเพิ่มขั้นตอนงานทำรั้วมาตรฐานจำนวน 6 ขั้นตอน ยืนยันใช่ไหม?");
+        let confirmMsg = confirm("ระบบจะเพิ่มขั้นตอนงานทำรั้วมาตรฐานจำนวน 6 ขั้นตอน พร้อมรายการตรวจสอบย่อย ยืนยันใช่ไหม?");
         if (!confirmMsg) return;
 
-        steps.forEach((step, index) => {
+        steps.forEach((s, index) => {
             currentState.workflow.push({
-                id: Date.now() + index, // Ensure unique IDs
-                step: step,
+                id: Date.now() + index,
+                step: s.step,
                 date: 'ยังไม่ระบุ',
                 status: 'pending',
-                image: null
+                image: null,
+                subTasks: s.subTasks.map(txt => ({ text: txt, completed: false }))
             });
         });
 
         saveStateToStorage();
         renderWorkflow();
         closeModal('brainstorm-modal');
-        alert('เพิ่มขั้นตอนงานสร้างรั้วบ้านสำเร็จ!');
+        alert('เพิ่มขั้นตอนงานและรายการตรวจสอบสำเร็จ!');
     }
 }
 
@@ -400,6 +454,8 @@ function openAddWorkflowModal() {
     document.getElementById('wf-date').value = '';
     document.getElementById('wf-status').value = 'pending';
     document.getElementById('wf-image').value = '';
+    tempSubTasks = [];
+    renderTempSubTasks();
     openModal('add-workflow-modal');
 }
 
@@ -412,11 +468,19 @@ async function saveWorkflow() {
     if (!step) return alert("กรุณาใส่ชื่อกระบวนการ");
 
     let imageData = null;
+    // Check if there's a new image selected
     if (imageInput.files && imageInput.files[0]) {
         try {
             imageData = await readAndCompressImage(imageInput.files[0]);
         } catch (e) {
             console.warn("Could not read image", e);
+        }
+    } else {
+        // Keep existing image if no new one is selected AND preview is still visible
+        const previewVisible = document.getElementById('wf-preview-container').style.display !== 'none';
+        if (activeWorkflowId && previewVisible) {
+            const existing = currentState.workflow.find(w => w.id === activeWorkflowId);
+            if (existing) imageData = existing.image;
         }
     }
 
@@ -426,7 +490,8 @@ async function saveWorkflow() {
             item.step = step;
             item.date = date;
             item.status = status;
-            if (imageData) item.image = imageData;
+            item.image = imageData;
+            item.subTasks = [...tempSubTasks];
         }
         activeWorkflowId = null;
     } else {
@@ -435,13 +500,81 @@ async function saveWorkflow() {
             step,
             date,
             status,
-            image: imageData
+            image: imageData,
+            subTasks: [...tempSubTasks]
         });
     }
 
     saveStateToStorage();
     renderWorkflow();
     closeModal('add-workflow-modal');
+}
+
+// --- SUB-TASKS LOGIC ---
+let tempSubTasks = [];
+
+function addSubTask() {
+    const input = document.getElementById('subtask-input');
+    const text = input.value.trim();
+    if (!text) return;
+
+    tempSubTasks.push({ text: text, completed: false });
+    input.value = '';
+    renderTempSubTasks();
+}
+
+function removeSubTask(index) {
+    tempSubTasks.splice(index, 1);
+    renderTempSubTasks();
+}
+
+function renderTempSubTasks() {
+    const list = document.getElementById('subtask-list-modal');
+    if (!list) return;
+    list.innerHTML = '';
+    tempSubTasks.forEach((st, index) => {
+        list.innerHTML += `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: rgba(0,0,0,0.2); border-radius: 8px; margin-bottom: 0.4rem;">
+                <span style="font-size: 0.9rem;">${st.text}</span>
+                <button class="btn btn-icon" style="width: 25px; height: 25px; background: var(--danger-color);" onclick="removeSubTask(${index})"><i class='bx bx-trash'></i></button>
+            </div>
+        `;
+    });
+}
+
+function toggleSubTask(workflowId, subTaskIndex) {
+    const item = currentState.workflow.find(w => w.id === workflowId);
+    if (item && item.subTasks && item.subTasks[subTaskIndex]) {
+        item.subTasks[subTaskIndex].completed = !item.subTasks[subTaskIndex].completed;
+        saveStateToStorage();
+        renderWorkflow();
+    }
+}
+
+// --- IMAGE PREVIEW LOGIC ---
+function handleImagePreview(event, previewId) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        const container = document.getElementById(previewId);
+        container.innerHTML = `
+            <img src="${e.target.result}" style="width: 100%; border-radius: 8px; border: 1px solid var(--glass-border); margin-top: 10px;">
+            <button onclick="clearImagePreview('${event.target.id}', '${previewId}')" style="position: absolute; top: 20px; right: 10px; background: var(--danger-color); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">
+                <i class='bx bx-trash'></i>
+            </button>
+        `;
+        container.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+}
+
+function clearImagePreview(inputId, previewId) {
+    document.getElementById(inputId).value = '';
+    const container = document.getElementById(previewId);
+    container.innerHTML = '';
+    container.style.display = 'none';
 }
 
 // Helper to compress images before storing in LocalStorage
