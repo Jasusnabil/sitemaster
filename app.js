@@ -88,7 +88,8 @@ const pages = {
     workflow: "กระบวนการงาน",
     time: "ลงเวลาทำงาน",
     attendance: "เช็คชื่อทีมงาน",
-    compare: "เปรียบเทียบราคา"
+    compare: "เปรียบเทียบราคา",
+    estimate: "คำนวณวัสดุทำรั้ว"
 };
 
 function navigate(viewId, navElement = null) {
@@ -112,6 +113,8 @@ function navigate(viewId, navElement = null) {
             }
         });
     }
+
+    if (viewId === 'estimate') renderEstimation();
 }
 
 // --- MATERIALS FUNCTIONALITY ---
@@ -303,6 +306,58 @@ function deleteWorkflow(id) {
         saveStateToStorage();
         renderWorkflow();
     }
+}
+
+// --- ESTIMATION FUNCTIONALITY ---
+const fenceEstimateData = [
+    { name: '1. เสาเข็ม/ฟุตติ้ง', qty: '27–32 ต้น', priceRange: '500–1,500', unit: 'ต้น/ชุด', avgPrice: 1000 },
+    { name: '2. บล็อก/อิฐมอญสำหรับก่อ', qty: '4,000–6,000 ก้อน', priceRange: '4–8', unit: 'ก้น', avgPrice: 6 },
+    { name: '3. ปูนซีเมนต์ (ปอร์ตแลนด์/มอร์ตาร์)', qty: '150–250 ถุง', priceRange: '180–250', unit: 'ถุง', avgPrice: 215 },
+    { name: '4. ทรายหยาบ + ทรายละเอียด', qty: '10–15 ลบ.ม.', priceRange: '400–800', unit: 'ลบ.ม.', avgPrice: 600 },
+    { name: '5. หิน 1–2 (ผสมคอนกรีต)', qty: '5–10 ลบ.ม.', priceRange: '500–900', unit: 'ลบ.ม.', avgPrice: 700 },
+    { name: '6. เหล็กเส้น (DB/RB)', qty: '1,000–2,000 กก.', priceRange: '25–40', unit: 'กก.', avgPrice: 32 },
+    { name: '7. ลวดผูกเหล็ก', qty: '10–20 กก.', priceRange: '50–80', unit: 'กก.', avgPrice: 65 },
+    { name: '8. ไม้แบบ/เหล็กแบบ', qty: '1 ชุด', priceRange: '5,000–15,000', unit: 'ชุด', avgPrice: 10000 },
+    { name: '9. ท่อ/เหล็กเสียบรูระบายน้ำ', qty: 'ตามต้องการ', priceRange: '50–200', unit: 'ชิ้น', avgPrice: 125 },
+    { name: '10. สีทา/กันซึม/จับเสี้ยม', qty: 'ตามพื้นที่', priceRange: '500–2,000', unit: 'กระป๋อง', avgPrice: 1250 }
+];
+
+function renderEstimation() {
+    const list = document.getElementById('estimate-list');
+    list.innerHTML = '';
+
+    fenceEstimateData.forEach((item, index) => {
+        list.innerHTML += `
+            <tr style="border-bottom: 1px solid var(--glass-border);">
+                <td style="padding: 1rem; font-size: 0.9rem;">
+                    <div style="font-weight: 500;">${item.name}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary);">${item.unit}</div>
+                </td>
+                <td style="padding: 1rem; font-size: 0.9rem; color: var(--text-secondary);">${item.qty}</td>
+                <td style="padding: 1rem; font-size: 0.9rem; text-align: right;">
+                    <span style="display: block; font-weight: 600; color: var(--warning-color);">฿${item.avgPrice.toLocaleString()}</span>
+                    <span style="font-size: 0.7rem; color: var(--text-secondary);">${item.priceRange}.-</span>
+                </td>
+                <td style="padding: 1rem; text-align: center;">
+                    <button class="btn btn-icon" style="width: 32px; height: 32px; font-size: 1rem; background: var(--success-color);" 
+                        onclick="addFromEstimate(${index})"><i class='bx bx-plus'></i></button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+function addFromEstimate(index) {
+    const item = fenceEstimateData[index];
+    currentState.materials.push({
+        id: Date.now(),
+        name: `${item.name} (ประมาณการ)`,
+        price: item.avgPrice,
+        location: "ประมาณการเบื้องต้น",
+        image: null
+    });
+    saveStateToStorage();
+    alert(`เพิ่ม "${item.name}" ลงในรายการจัดซื้อ (ราคากลาง) เรียบร้อยแล้ว`);
 }
 
 function applyTemplate() {

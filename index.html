@@ -237,6 +237,41 @@
                         onclick="saveToMaterialsFromCompare()">บันทึกตัวเลือกที่คุ้มกว่าลง 'ซื้อของ'</button>
                 </div>
             </section>
+
+            <!-- Estimation View -->
+            <section id="view-estimate" class="view">
+                <div class="flex-between">
+                    <h2 class="section-title">ประมาณการวัสดุทำรั้ว</h2>
+                    <span class="badge" style="background: var(--warning-color); color: white;">80 ม. / สูง 2 ม.</span>
+                </div>
+
+                <div class="card" style="padding: 0; overflow: hidden; margin-top: 1rem;">
+                    <div style="overflow-x: auto;">
+                        <table class="estimate-table"
+                            style="width: 100%; border-collapse: collapse; color: white; min-width: 600px;">
+                            <thead style="background: rgba(255,255,255,0.05);">
+                                <tr>
+                                    <th
+                                        style="padding: 1rem; text-align: left; border-bottom: 1px solid var(--glass-border);">
+                                        รายการ</th>
+                                    <th
+                                        style="padding: 1rem; text-align: left; border-bottom: 1px solid var(--glass-border);">
+                                        จำนวน</th>
+                                    <th
+                                        style="padding: 1rem; text-align: right; border-bottom: 1px solid var(--glass-border);">
+                                        ราคากลาง</th>
+                                    <th
+                                        style="padding: 1rem; text-align: center; border-bottom: 1px solid var(--glass-border);">
+                                        เพิ่มลงลิสต์</th>
+                                </tr>
+                            </thead>
+                            <tbody id="estimate-list">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
         </main>
 
         <!-- Bottom Navigation -->
@@ -264,6 +299,10 @@
             <a href="#" class="nav-item" onclick="navigate('compare', this)">
                 <i class='bx bx-abacus'></i>
                 <span>เทียบราคา</span>
+            </a>
+            <a href="#" class="nav-item" onclick="navigate('estimate', this)">
+                <i class='bx bx-calculator'></i>
+                <span>คำนวณรั้ว</span>
             </a>
         </nav>
 
