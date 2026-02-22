@@ -56,6 +56,14 @@ document.addEventListener("DOMContentLoaded", () => {
     renderStores(); // Initial render for stores
     updateStoreDatalist();
 
+    // Attach event listener for worker type select cleanly
+    const workerTypeSelect = document.getElementById('worker-type');
+    if (workerTypeSelect) {
+        workerTypeSelect.addEventListener('change', function () {
+            document.getElementById('worker-wage-group').style.display = this.value === 'เหมาจ่าย' ? 'none' : 'block';
+        });
+    }
+
     // Resume timer if active in state
     if (currentState.timer.isActive) {
         const now = Date.now();
@@ -126,23 +134,41 @@ function renderMaterials() {
         return;
     }
 
-    filteredMaterials.forEach(mat => {
+    // Sort chronologically (oldest to newest) to act as a ledger
+    const sortedMaterials = [...filteredMaterials].sort((a, b) => {
+        const dateA = a.date ? new Date(a.date).getTime() : a.id;
+        const dateB = b.date ? new Date(b.date).getTime() : b.id;
+        return dateB - dateA; // Newest first for easier reading, or A - B for chronological. User said "ไล่ตั้งแต่ บันทึกแรก..." meaning chronological (A to B)
+    }).reverse(); // Reversing B-A to A-B (oldest first)
+
+    sortedMaterials.forEach(mat => {
         total += parseFloat(mat.price);
         let imgTag = mat.image ? `<img src="${mat.image}" style="max-width: 50px; max-height: 50px; border-radius: 4px; object-fit: cover;" alt="receipt">` : '';
 
+        let dateStr = '';
+        if (mat.date) {
+            const d = new Date(mat.date);
+            dateStr = `${d.toLocaleDateString('th-TH')} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')} น.`;
+        }
+
         list.innerHTML += `
-            <div class="flex-item-list">
-                ${imgTag}
-                <div class="item-details" style="flex: 1; margin-left: ${mat.image ? '0.5rem' : '0'};">
-                    <h4>${mat.name}</h4>
-                    <div class="item-meta">
-                        <i class='bx bx-store-alt'></i> ${mat.location}
+            <div class="flex-item-list" style="flex-direction: column; align-items: stretch;">
+                <div style="display: flex; gap: 0.5rem; justify-content: space-between; margin-bottom: 0.25rem;">
+                    <div style="font-size: 0.8rem; color: var(--text-secondary);"><i class='bx bx-time-five'></i> ${dateStr || 'ข้อมูลเก่า'}</div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-icon" style="width:24px; height:24px; font-size:0.8rem; background: var(--warning-color);" onclick="editMaterial(${mat.id})"><i class='bx bx-edit'></i></button>
+                        <button class="btn btn-icon" style="width:24px; height:24px; font-size:0.8rem; background: var(--danger-color);" onclick="deleteMaterial(${mat.id})"><i class='bx bx-trash'></i></button>
                     </div>
                 </div>
-                <div style="display: flex; gap: 0.5rem; align-items: center;">
-                    <div class="item-price">฿${mat.price.toLocaleString()}</div>
-                    <button class="btn btn-icon" style="width:30px; height:30px; font-size:1rem; background: var(--warning-color);" onclick="editMaterial(${mat.id})"><i class='bx bx-edit'></i></button>
-                    <button class="btn btn-icon" style="width:30px; height:30px; font-size:1rem; background: var(--danger-color);" onclick="deleteMaterial(${mat.id})"><i class='bx bx-trash'></i></button>
+                <div style="display: flex; align-items: center;">
+                    ${imgTag}
+                    <div class="item-details" style="flex: 1; margin-left: ${mat.image ? '0.5rem' : '0'};">
+                        <h4 style="margin: 0;">${mat.name}</h4>
+                        <div class="item-meta">
+                            <i class='bx bx-store-alt'></i> ${mat.location}
+                        </div>
+                    </div>
+                    <div class="item-price" style="font-size: 1.1rem; font-weight: 700;">฿${mat.price.toLocaleString()}</div>
                 </div>
             </div>
         `;
@@ -150,8 +176,8 @@ function renderMaterials() {
 
     if (currentState.materials.length > 0) {
         list.innerHTML += `
-            <div class="flex-item-list" style="background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.3);">
-                <div class="item-details"><h4>ยอดรวมประมาณการ</h4></div>
+            <div class="flex-item-list" style="background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.3); margin-top: 1rem;">
+                <div class="item-details"><h4>รวมยอดใช้จ่ายทั้งหมด</h4></div>
                 <div class="item-price">฿${total.toLocaleString()}</div>
             </div>
         `;
@@ -247,6 +273,7 @@ async function addMaterial() {
             mat.price = price ? parseFloat(price) : 0;
             mat.location = location || "ไม่ระบุ";
             mat.image = imageData;
+            // keep existing date
         }
         activeMaterialId = null;
     } else {
@@ -256,7 +283,8 @@ async function addMaterial() {
             name,
             price: price ? parseFloat(price) : 0,
             location: location || "ไม่ระบุ",
-            image: imageData
+            image: imageData,
+            date: new Date().toISOString() // Chronological ledger tracking
         });
     }
 
@@ -290,7 +318,7 @@ function renderWorkflow() {
         else if (item.status === 'active') badge = `<span class="badge badge-primary">กำลังทำ</span>`;
         else badge = `<span class="badge" style="background: rgba(255,255,255,0.1)">รอ</span>`;
 
-        let imgTag = item.image ? `<img src="${item.image}" style="width: 100%; max-height: 120px; object-fit: cover; border-radius: 6px; margin-top: 0.5rem;" alt="work photo">` : '';
+        let imgTag = item.image ? `<div style="margin-top: 0.75rem; border-radius: 8px; overflow: hidden; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2);"><img src="${item.image}" style="width: 100%; display: block; max-height: 200px; object-fit: contain;" alt="work photo"></div>` : '';
 
         let subTasksHtml = '';
         if (item.subTasks && item.subTasks.length > 0) {
@@ -299,9 +327,9 @@ function renderWorkflow() {
             item.subTasks.forEach((st, idx) => {
                 const isDone = st.completed ? 'checked' : '';
                 subTasksHtml += `
-                    <label style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; cursor: pointer; color: ${st.completed ? 'var(--success-color)' : 'var(--text-primary)'}; opacity: ${st.completed ? '0.7' : '1'}; transition: all 0.2s;">
-                        <input type="checkbox" ${isDone} onchange="toggleSubTask(${item.id}, ${idx})" style="cursor: pointer; width: 18px; height: 18px;">
-                        <span style="${st.completed ? 'text-decoration: line-through;' : ''}">${st.text}</span>
+                    <label style="display: flex; align-items: flex-start; gap: 0.75rem; margin-bottom: 0.75rem; padding: 0.5rem; border-radius: 8px; background: rgba(0,0,0,0.1); cursor: pointer; color: ${st.completed ? 'var(--success-color)' : 'var(--text-primary)'}; opacity: ${st.completed ? '0.8' : '1'}; transition: all 0.2s; word-break: break-word; min-height: 44px;">
+                        <input type="checkbox" ${isDone} onchange="toggleSubTask(${item.id}, ${idx})" style="cursor: pointer; width: 22px; height: 22px; flex-shrink: 0; margin-top: 2px;">
+                        <span style="${st.completed ? 'text-decoration: line-through;' : ''} line-height: 1.4; flex: 1;">${st.text}</span>
                     </label>
                 `;
             });
