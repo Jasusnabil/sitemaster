@@ -19,7 +19,17 @@ let currentState = {
 const STORAGE_KEY = 'siteMasterData';
 
 function saveData() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(currentState));
+    // Non-blocking save to avoid UI stutter during modal close/animations
+    setTimeout(() => {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(currentState));
+        } catch (e) {
+            console.error("Save Data Error:", e);
+            if (e.name === 'QuotaExceededError') {
+                showToast('หน่วยความจำเต็ม! กรุณาลบข้อมูลเก่าบางส่วนออก', 'danger');
+            }
+        }
+    }, 0);
 }
 
 function loadData() {
@@ -683,19 +693,15 @@ function clearImagePreview(inputId, previewId) {
 function readAndCompressImage(file) {
     return new Promise((resolve, reject) => {
         const img = new Image();
-        const reader = new FileReader();
-
-        reader.onload = (e) => {
-            img.src = e.target.result;
-        };
-        reader.onerror = reject;
+        const objectUrl = URL.createObjectURL(file);
 
         img.onload = () => {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
 
             // Max Width/Height for storage Optimization
-            const MAX_SIZE = 1200;
+            // Reduced to 1000 for better mobile performance and less memory spike
+            const MAX_SIZE = 1000;
             let width = img.width;
             let height = img.height;
 
@@ -715,12 +721,20 @@ function readAndCompressImage(file) {
             canvas.height = height;
             ctx.drawImage(img, 0, 0, width, height);
 
-            // Compress to 0.6 quality JPEG for storage
-            resolve(canvas.toDataURL('image/jpeg', 0.6));
-        };
-        img.onerror = reject;
+            // Compress to 0.5 quality JPEG for storage efficiency
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
 
-        reader.readAsDataURL(file);
+            // Clean up to save memory
+            URL.revokeObjectURL(objectUrl);
+            resolve(dataUrl);
+        };
+
+        img.onerror = (e) => {
+            URL.revokeObjectURL(objectUrl);
+            reject(e);
+        };
+
+        img.src = objectUrl;
     });
 }
 
