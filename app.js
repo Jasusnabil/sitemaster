@@ -11,50 +11,40 @@ let currentState = {
     },
     workers: [],
     stores: [],
+    rentals: [],
     compareResult: null
 };
 
 // --- DATA PERSISTENCE ---
 const STORAGE_KEY = 'siteMasterData';
 
-function saveStateToStorage() {
+function saveData() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(currentState));
 }
 
-function loadStateFromStorage() {
+function loadData() {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
         try {
             const parsed = JSON.parse(saved);
-            // Merge saved data with default structure to prevent missing fields
             currentState = { ...currentState, ...parsed };
-            // Ensure timer structure is consistent after loading
-            if (!currentState.timer.hasOwnProperty('isActive')) currentState.timer.isActive = false;
-            if (!currentState.timer.hasOwnProperty('totalSeconds')) currentState.timer.totalSeconds = 0;
-            if (!currentState.timer.hasOwnProperty('startTime')) currentState.timer.startTime = null;
         } catch (e) {
-            console.error("Error loading data from localStorage", e);
+            console.error("Error loading data", e);
         }
     }
 }
 
 // --- INIT ---
-let timerInterval = null; // Global variable for timer interval
+let timerInterval = null;
 
 document.addEventListener("DOMContentLoaded", () => {
+    loadData();
+    renderAll();
+
     // Current date
     const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    document.getElementById('current-date').textContent = new Date().toLocaleDateString('th-TH', dateOptions);
-
-    loadStateFromStorage();
-    renderMaterials();
-    renderWorkflow();
-    renderTimeLogs();
-    renderWorkers(); // Initial render for workers
-
-    if (!currentState.stores) currentState.stores = [];
-    renderStores(); // Initial render for stores
-    updateStoreDatalist();
+    const dateEl = document.getElementById('current-date');
+    if (dateEl) dateEl.textContent = new Date().toLocaleDateString('th-TH', dateOptions);
 
     // Attach event listener for worker type select cleanly
     const workerTypeSelect = document.getElementById('worker-type');
@@ -65,21 +55,19 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Resume timer if active in state
-    if (currentState.timer.isActive) {
+    if (currentState.timer && currentState.timer.isActive) {
         const now = Date.now();
         currentState.timer.totalSeconds += Math.floor((now - currentState.timer.startTime) / 1000);
         currentState.timer.startTime = now;
         timerInterval = setInterval(updateTimerDisplay, 1000);
-        document.getElementById('timer-btn').innerHTML = "<i class='bx bx-pause-circle'></i> หยุดพัก";
-        document.getElementById('timer-btn').classList.replace('btn-primary', 'btn-danger');
-        document.getElementById('timer-status').textContent = 'กำลังทำงาน...';
-        document.getElementById('timer-status').style.color = 'var(--success-color)';
-    } else if (currentState.timer.totalSeconds > 0) {
-        updateTimerDisplay();
-        document.getElementById('timer-status').textContent = 'พักงาน';
-        document.getElementById('timer-status').style.color = 'var(--warning-color)';
+        const btn = document.getElementById('timer-btn');
+        if (btn) {
+            btn.innerHTML = "<i class='bx bx-pause-circle'></i> หยุดพัก";
+            btn.classList.replace('btn-primary', 'btn-danger');
+        }
     }
 });
+
 
 // --- NAVIGATION ---
 const pages = {
@@ -89,8 +77,10 @@ const pages = {
     time: "ลงเวลาทำงาน",
     attendance: "เช็คชื่อทีมงาน",
     compare: "เปรียบเทียบราคา",
-    estimate: "คำนวณวัสดุทำรั้ว",
-    stores: "สมุดติดต่อร้านค้า"
+    estimate: "ประมาณการรั้ว",
+    stores: "สมุดติดต่อร้านค้า",
+    rentals: 'เครื่องจักร & ของเช่า',
+    calendar: 'ปฏิทินงาน'
 };
 
 function navigate(viewId, navElement = null) {
@@ -116,6 +106,8 @@ function navigate(viewId, navElement = null) {
     }
 
     if (viewId === 'estimate') renderEstimation();
+    if (viewId === 'calendar') renderCalendar();
+    if (viewId === 'home') checkRentalAlerts();
 }
 
 // --- MATERIALS FUNCTIONALITY ---
@@ -751,7 +743,7 @@ function logTimeSpan(actionStart, actionEnd, seconds) {
         duration: timeSpent,
         desc: `บันทึกกิจกรรม(${actionStart} - ${actionEnd})`
     });
-    saveStateToStorage();
+    saveData();
     renderTimeLogs();
 }
 
@@ -1580,3 +1572,283 @@ function clearDualImagePreview(inputId1, inputId2, previewId, statusId) {
 
     if (statusContainer) statusContainer.style.display = 'none';
 }
+
+function checkRentalAlerts() {
+    const container = document.getElementById('rental-home-alerts');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const nearRentals = currentState.rentals.filter(r => {
+        if (r.status === 'returned') return false;
+        const retDate = new Date(r.returnDate);
+        const diffTime = retDate - today;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays <= 2;
+    });
+
+    nearRentals.forEach(r => {
+        const retDate = new Date(r.returnDate);
+        const diffTime = retDate - today;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        let msg = '';
+        if (diffDays < 0) msg = `คืนเกินกำหนด ${Math.abs(diffDays)} วัน!`;
+        else if (diffDays === 0) msg = `ต้องคืนวันนี้!`;
+        else msg = `ต้องคืนใน ${diffDays} วัน`;
+
+        container.innerHTML += `
+            <div class="rental-alert" onclick="navigate('rentals')" style="cursor:pointer;">
+                <i class='bx bx-alarm-exclamation' style="font-size: 1.5rem;"></i>
+                <div style="flex:1;">
+                    <div style="font-weight: bold;">คึนเครื่องจักร: ${r.item}</div>
+                    <div style="font-size: 0.75rem;">${msg} (${r.provider})</div>
+                </div>
+                <i class='bx bx-chevron-right'></i>
+            </div>
+        `;
+    });
+}
+
+// --- CALENDAR TIMELINE LOGIC ---
+function renderCalendar() {
+    const calendarDays = document.getElementById('calendar-days');
+    if (!calendarDays) return;
+    calendarDays.innerHTML = '';
+
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    const monthNames = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+        "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+    document.getElementById('calendar-month-name').textContent = `${monthNames[currentMonth]} ${currentYear + 543}`;
+
+    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+    // Fill empty slots before first day
+    for (let i = 0; i < firstDay; i++) {
+        calendarDays.innerHTML += '<div class="calendar-day other-month"></div>';
+    }
+
+    // Fill actual days
+    for (let day = 1; day <= daysInMonth; day++) {
+        const isToday = day === now.getDate() && currentMonth === now.getMonth() && currentYear === now.getFullYear();
+
+        // Match workflow items
+        const rawToday = new Date(currentYear, currentMonth, day);
+        const dayStr = day.toString();
+        const monthShort = rawToday.toLocaleDateString('th-TH', { month: 'short' }).replace('.', '');
+
+        const items = currentState.workflow.filter(w => {
+            if (w.date === 'วันนี้' && isToday) return true;
+            // Simple string matching for now (e.g. "25 พ.ย.")
+            return w.date.includes(dayStr) && w.date.includes(monthShort);
+        });
+
+        let eventsHtml = '';
+        items.forEach(item => {
+            eventsHtml += `<div class="calendar-event event-${item.status}" title="${item.step}">${item.step}</div>`;
+        });
+
+        calendarDays.innerHTML += `
+            <div class="calendar-day ${isToday ? 'today' : ''}">
+                <div class="calendar-date-num">${day}</div>
+                ${eventsHtml}
+            </div>
+        `;
+    }
+}
+
+
+// --- RENTAL TRACKING FUNCTIONALITY ---
+function renderRentals() {
+    const list = document.getElementById('rental-list');
+    if (!list) return;
+
+    const searchTerm = (document.getElementById('search-rentals')?.value || '').toLowerCase();
+    list.innerHTML = '';
+
+    const sortedRentals = [...currentState.rentals].sort((a, b) => new Date(a.returnDate) - new Date(b.returnDate));
+
+    sortedRentals.forEach(item => {
+        if (item.item.toLowerCase().includes(searchTerm) || item.provider.toLowerCase().includes(searchTerm)) {
+            const returnDate = new Date(item.returnDate);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const diffTime = returnDate - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            let statusBadge = '';
+            if (item.status === 'returned') {
+                statusBadge = '<span class="badge badge-success">คืนแล้ว</span>';
+            } else if (diffDays < 0) {
+                statusBadge = `<span class="badge badge-danger">เกินกำหนด ${Math.abs(diffDays)} วัน</span>`;
+            } else if (diffDays <= 2) {
+                statusBadge = `<span class="badge badge-warning">เหลืออีก ${diffDays} วัน</span>`;
+            } else {
+                statusBadge = `<span class="badge badge-primary">ปกติ (อีก ${diffDays} วัน)</span>`;
+            }
+
+            list.innerHTML += `
+                <div class="card" style="margin-bottom: 0.75rem; border-left: 4px solid ${item.status === 'returned' ? 'var(--success-color)' : (diffDays < 0 ? 'var(--danger-color)' : 'var(--primary-color)')};">
+                    <div class="flex-between">
+                        <div>
+                            <h3 style="font-size: 1.1rem; color: var(--text-primary);">${item.item}</h3>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                                <i class='bx bx-store'></i> ${item.provider}
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            ${statusBadge}
+                            <div style="font-size: 0.9rem; font-weight: bold; color: var(--warning-color); margin-top: 0.25rem;">฿${parseInt(item.price).toLocaleString()}/วัน</div>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.75rem; font-size: 0.85rem; padding-top: 0.75rem; border-top: 1px dashed rgba(255,255,255,0.1);">
+                        <div><i class='bx bx-calendar-plus'></i> เริ่ม: ${item.startDate}</div>
+                        <div><i class='bx bx-calendar-check'></i> คืน: ${item.returnDate}</div>
+                    </div>
+                    <div class="flex-between" style="margin-top: 0.75rem;">
+                         <div style="font-size: 0.85rem;">มัดจำ: ฿${parseInt(item.deposit || 0).toLocaleString()}</div>
+                         <div style="display: flex; gap: 0.5rem;">
+                            <button class="btn btn-icon" style="width:30px; height:30px; background: var(--success-color);" onclick="toggleRentalStatus(${item.id})"><i class='bx bx-check'></i></button>
+                            <button class="btn btn-icon" style="width:30px; height:30px; background: var(--warning-color);" onclick="editRental(${item.id})"><i class='bx bx-edit'></i></button>
+                            <button class="btn btn-icon" style="width:30px; height:30px; background: var(--danger-color);" onclick="deleteRental(${item.id})"><i class='bx bx-trash'></i></button>
+                         </div>
+                    </div>
+                </div>
+            `;
+        }
+    });
+}
+
+function openAddRentalModal() {
+    document.getElementById('rental-modal-title').textContent = 'เพิ่มรายการของเช่า';
+    document.getElementById('rental-item').value = '';
+    document.getElementById('rental-provider').value = '';
+    document.getElementById('rental-start').value = new Date().toISOString().split('T')[0];
+    document.getElementById('rental-return').value = '';
+    document.getElementById('rental-price').value = '';
+    document.getElementById('rental-deposit').value = '';
+    document.getElementById('save-rental-btn').onclick = () => saveRental();
+    openModal('add-rental-modal');
+}
+
+function saveRental(id = null) {
+    const item = document.getElementById('rental-item').value;
+    const provider = document.getElementById('rental-provider').value;
+    const start = document.getElementById('rental-start').value;
+    const ret = document.getElementById('rental-return').value;
+    const price = document.getElementById('rental-price').value;
+    const deposit = document.getElementById('rental-deposit').value;
+
+    if (!item || !ret) {
+        showToast('กรุณากรอกข้อมูลให้ครบถ้วน', 'danger');
+        return;
+    }
+
+    if (id) {
+        const index = currentState.rentals.findIndex(r => r.id === id);
+        currentState.rentals[index] = { ...currentState.rentals[index], item, provider, startDate: start, returnDate: ret, price, deposit };
+    } else {
+        currentState.rentals.push({
+            id: Date.now(),
+            item,
+            provider,
+            startDate: start,
+            returnDate: ret,
+            price,
+            deposit,
+            status: 'active'
+        });
+    }
+
+    saveData();
+    renderRentals();
+    closeModal('add-rental-modal');
+    showToast('บันทึกข้อมูลสำเร็จ');
+}
+
+function toggleRentalStatus(id) {
+    const index = currentState.rentals.findIndex(r => r.id === id);
+    currentState.rentals[index].status = currentState.rentals[index].status === 'returned' ? 'active' : 'returned';
+    saveData();
+    renderRentals();
+    showToast('อัปเดตสถานะสำเร็จ');
+}
+
+function editRental(id) {
+    const item = currentState.rentals.find(r => r.id === id);
+    document.getElementById('rental-modal-title').textContent = 'แก้ไขรายการของเช่า';
+    document.getElementById('rental-item').value = item.item;
+    document.getElementById('rental-provider').value = item.provider;
+    document.getElementById('rental-start').value = item.startDate;
+    document.getElementById('rental-return').value = item.returnDate;
+    document.getElementById('rental-price').value = item.price;
+    document.getElementById('rental-deposit').value = item.deposit;
+    document.getElementById('save-rental-btn').onclick = () => saveRental(id);
+    openModal('add-rental-modal');
+}
+
+function deleteRental(id) {
+    if (confirm('ยืนยันหน้าลบรายการของเช่า?')) {
+        currentState.rentals = currentState.rentals.filter(r => r.id !== id);
+        saveData();
+        renderRentals();
+        showToast('ลบรายการสำเร็จ', 'danger');
+    }
+}
+
+// --- DAILY SITE REPORT LOGIC ---
+function generateDailyReport() {
+    const todayStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+    const presentWorkers = currentState.workers.filter(w => w.isPresent);
+
+    // Date format matching materials/workflow
+    const d = new Date();
+    const shortToday = d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+
+    const matsToday = currentState.materials.filter(m => m.date === shortToday);
+    const completedToday = currentState.workflow.filter(w => w.status === 'completed');
+
+    let report = `🚧 รายงานความคืบหน้างานก่อสร้าง 🚧\n🗓 วันที่: ${todayStr}\n\n`;
+
+    report += `👥 ทีมงานที่เข้าหน้างาน (${presentWorkers.length} คน):\n`;
+    if (presentWorkers.length > 0) {
+        presentWorkers.forEach(w => report += `- ${w.name} (${w.role || w.type})\n`);
+    } else {
+        report += `- ไม่มีพนักงานลงชื่อเข้างาน\n`;
+    }
+
+    report += `\n🛒 รายการวัสดุเข้าวันนี้:\n`;
+    if (matsToday.length > 0) {
+        matsToday.forEach(m => report += `- ${m.name} (฿${m.price.toLocaleString()})\n`);
+    } else {
+        report += `- ไม่มีรายการซื้อวัสดุวันนี้\n`;
+    }
+
+    const activeWorkflow = currentState.workflow.filter(w => w.status === 'active');
+    report += `\n⚙️ งานที่กำลังดำเนินการ:\n`;
+    if (activeWorkflow.length > 0) {
+        activeWorkflow.forEach(w => report += `- ${w.step}\n`);
+    } else {
+        report += `- ไม่มีงานที่ระบุว่ากำลังทำ\n`;
+    }
+
+    report += `\n⏰ เวลาทำงานรวมวันนี้: ${document.getElementById('total-time-today')?.textContent || '00:00:00'}\n`;
+    report += `\n--- สรุปโดย SiteMaster ---`;
+
+    document.getElementById('report-text').value = report;
+    openModal('daily-report-modal');
+}
+
+function copyReport() {
+    const text = document.getElementById('report-text');
+    text.select();
+    document.execCommand('copy');
+    showToast('คัดลอกรายงานสำเร็จ พร้อมส่ง LINE!');
+}
+

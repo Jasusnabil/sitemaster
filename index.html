@@ -48,6 +48,8 @@
                     </div>
                 </div>
 
+                <div id="rental-home-alerts"></div>
+
                 <h2 class="section-title">งานด่วนที่กำลังทำ</h2>
                 <div class="card active-task-card">
                     <div class="task-header">
@@ -56,7 +58,11 @@
                     </div>
                     <h3>ขึ้นโครงเหล็กและเทปูน</h3>
                     <p>สถานที่: ไซต์งาน A</p>
-                    <button class="btn btn-primary mt-3" onclick="navigate('time')">ลงเวลาทำงาน</button>
+                    <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                        <button class="btn btn-primary" style="flex: 1;" onclick="navigate('time')">ลงเวลาทำงาน</button>
+                        <button class="btn btn-warning" style="flex: 1; color: white;"
+                            onclick="generateDailyReport()"><i class='bx bx-send'></i> สรุปส่ง LINE</button>
+                    </div>
                 </div>
 
                 <h2 class="section-title mt-4">จัดการระบบ (สำรองข้อมูล & ออกรายงาน)</h2>
@@ -120,6 +126,27 @@
                 </div>
             </section>
 
+            <!-- Rentals View -->
+            <section id="view-rentals" class="view">
+                <div class="flex-between">
+                    <h2 class="section-title">เครื่องจักร & ของเช่า</h2>
+                    <button class="btn btn-icon" onclick="openAddRentalModal()"><i class='bx bx-plus'></i></button>
+                </div>
+
+                <div class="search-container" style="margin-bottom: 1rem; position: relative;">
+                    <i class='bx bx-search'
+                        style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary);"></i>
+                    <input type="text" id="search-rentals" placeholder="ค้นหาของเช่า หรือ ร้านที่เช่า..."
+                        oninput="renderRentals()"
+                        style="width: 100%; padding: 0.75rem 1rem 0.75rem 2.5rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0, 0, 0, 0.2); color: white; font-size: 1rem;">
+                </div>
+
+                <div id="rental-alert-container"></div>
+                <div class="rental-list" id="rental-list" style="margin-top: 1rem;">
+                    <!-- Rentals dynamically added -->
+                </div>
+            </section>
+
             <!-- Workflow View -->
             <section id="view-workflow" class="view">
                 <div class="flex-between">
@@ -128,6 +155,9 @@
                         <button class="btn btn-warning" style="padding: 0.5rem; color:white; border-radius:8px;"
                             onclick="openModal('brainstorm-modal')" title="แนะนำขั้นตอน"><i class='bx bx-bulb'></i>
                             แนะนำ</button>
+                        <button class="btn btn-primary" style="padding: 0.5rem; color:white; border-radius:8px;"
+                            onclick="navigate('calendar')" title="ดูปฏิทิน"><i class='bx bx-calendar'></i>
+                            ปฏิทิน</button>
                         <button class="btn btn-icon" onclick="openAddWorkflowModal()"><i
                                 class='bx bx-plus'></i></button>
                     </div>
@@ -300,7 +330,33 @@
                         </table>
                     </div>
                 </div>
-            </section>
+                <!-- Calendar View -->
+                <section id="view-calendar" class="view">
+                    <div class="flex-between">
+                        <h2 class="section-title">ปฏิทินงาน</h2>
+                        <div style="display:flex; gap:0.5rem;">
+                            <button class="btn btn-warning" style="padding: 0.5rem; color:white; border-radius:8px;"
+                                onclick="navigate('workflow')"><i class='bx bx-list-ul'></i> ดูรายการ</button>
+                        </div>
+                    </div>
+
+                    <div class="card" style="padding: 0.5rem;">
+                        <div id="calendar-month-name"
+                            style="text-align: center; font-weight: 600; margin-bottom: 0.5rem; font-size: 1.1rem; color: var(--primary-color);">
+                        </div>
+                        <div class="calendar-grid">
+                            <div class="calendar-header">อา.</div>
+                            <div class="calendar-header">จ.</div>
+                            <div class="calendar-header">อ.</div>
+                            <div class="calendar-header">พ.</div>
+                            <div class="calendar-header">พฤ.</div>
+                            <div class="calendar-header">ศ.</div>
+                            <div class="calendar-header">ส.</div>
+                            <!-- Days dynamically added -->
+                            <div id="calendar-days" style="display: contents;"></div>
+                        </div>
+                    </div>
+                </section>
         </main>
 
         <!-- Bottom Navigation -->
@@ -324,6 +380,10 @@
             <a href="#" class="nav-item" onclick="navigate('attendance', this)">
                 <i class='bx bx-group'></i>
                 <span>พนักงาน</span>
+            </a>
+            <a href="#" class="nav-item" onclick="navigate('rentals', this)">
+                <i class='bx bx-wrench'></i>
+                <span>ของเช่า</span>
             </a>
             <a href="#" class="nav-item" onclick="navigate('compare', this)">
                 <i class='bx bx-abacus'></i>
@@ -593,6 +653,63 @@
                     </div>
                     <button class="btn btn-warning w-100" style="color:white; margin-top:1rem;"
                         onclick="saveTimeLogEdit()">บันทึกการแก้ไข</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="add-rental-modal" class="modal">
+            <div class="modal-content card">
+                <div class="modal-header">
+                    <h3 id="rental-modal-title">เพิ่มรายการของเช่า</h3>
+                    <button class="close-btn" onclick="closeModal('add-rental-modal')"><i class='bx bx-x'></i></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>ชื่ออุปกรณ์ / เครื่องจักร</label>
+                        <input type="text" id="rental-item" placeholder="เช่น รถขุด, นั่งร้าน 20 ชุด">
+                    </div>
+                    <div class="form-group">
+                        <label>ร้านที่เช่า / เจ้าของ</label>
+                        <input type="text" id="rental-provider" placeholder="ชื่อร้าน หรือ เบอร์โทร">
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                        <div class="form-group">
+                            <label>วันที่เริ่มเช่า</label>
+                            <input type="date" id="rental-start">
+                        </div>
+                        <div class="form-group">
+                            <label>วันที่ต้องคืน</label>
+                            <input type="date" id="rental-return">
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                        <div class="form-group">
+                            <label>ราคาเช่า / วัน</label>
+                            <input type="number" id="rental-price" placeholder="บาท">
+                        </div>
+                        <div class="form-group">
+                            <label>เงินมัดจำ (ถ้ามี)</label>
+                            <input type="number" id="rental-deposit" placeholder="บาท">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary w-100" id="save-rental-btn"
+                        onclick="saveRental()">บันทึกข้อมูลเช่า</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="daily-report-modal" class="modal">
+            <div class="modal-content card" style="border-color: var(--success-color);">
+                <div class="modal-header">
+                    <h3><i class='bx bx-send' style="color:var(--success-color);"></i> สรุปรายงานรายวัน (ส่ง LINE)</h3>
+                    <button class="close-btn" onclick="closeModal('daily-report-modal')"><i
+                            class='bx bx-x'></i></button>
+                </div>
+                <div class="modal-body">
+                    <textarea id="report-text"
+                        style="width: 100%; height: 300px; padding: 1rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.3); color: white; font-family: inherit; font-size: 0.9rem; resize: none;"></textarea>
+                    <button class="btn btn-success w-100" style="margin-top: 1rem;" onclick="copyReport()">คัดลอกข้อความ
+                        <i class='bx bx-copy'></i></button>
                 </div>
             </div>
         </div>
