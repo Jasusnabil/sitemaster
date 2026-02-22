@@ -22,7 +22,13 @@ function saveData() {
     // Non-blocking save to avoid UI stutter during modal close/animations
     setTimeout(() => {
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(currentState));
+            const dataString = JSON.stringify(currentState);
+            localStorage.setItem(STORAGE_KEY, dataString);
+
+            // Proactive Quota Warning (~4.5MB of 5MB typical limit)
+            if (dataString.length > 4.5 * 1024 * 1024) {
+                showToast('ข้อมูลใกล้เต็ม (4.5MB)! กรุณาส่งออก (Export) และลบข้อมูลเก่าบางส่วน', 'warning');
+            }
         } catch (e) {
             console.error("Save Data Error:", e);
             if (e.name === 'QuotaExceededError') {
@@ -261,7 +267,7 @@ async function addMaterial() {
     const originalHeaderText = headerBtn ? headerBtn.textContent : '';
 
     btn.disabled = true;
-    btn.textContent = 'กำลังบันทึก...';
+    btn.textContent = 'กำลังลดขนาดรูปภาพ...';
     if (headerBtn) {
         headerBtn.disabled = true;
         headerBtn.textContent = '...';
@@ -603,7 +609,7 @@ async function saveWorkflow() {
     const originalHeaderText = headerBtn ? headerBtn.textContent : '';
 
     btn.disabled = true;
-    btn.textContent = 'กำลังประมวลผลรูปภาพ...';
+    btn.textContent = 'กำลังลดขนาดรูปภาพ...';
     if (headerBtn) {
         headerBtn.disabled = true;
         headerBtn.textContent = '...';
@@ -732,17 +738,20 @@ function clearImagePreview(inputId, previewId) {
 
 // Helper to compress images before storing in LocalStorage
 // Optimized to be non-blocking using toBlob and yielding to the main thread
+// Aggressive memory management for huge iPhone images
 async function readAndCompressImage(file) {
     return new Promise((resolve, reject) => {
         const img = new Image();
         const objectUrl = URL.createObjectURL(file);
 
         img.onload = async () => {
+            let canvas = document.createElement('canvas');
             try {
-                const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
 
-                const MAX_SIZE = 1000;
+                // Aggressive size reduction for high-res mobile photos
+                // 800px provides a great balance for LocalStorage and RAM
+                const MAX_SIZE = 800;
                 let width = img.width;
                 let height = img.height;
 
@@ -761,29 +770,43 @@ async function readAndCompressImage(file) {
                 canvas.width = width;
                 canvas.height = height;
 
-                // Use requestAnimationFrame to ensure we don't block the UI before starting heavy draw
                 requestAnimationFrame(() => {
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    // Yield again before compression
                     setTimeout(() => {
                         canvas.toBlob((blob) => {
                             URL.revokeObjectURL(objectUrl);
+
                             if (!blob) {
+                                // Explicit cleanup on failure
+                                canvas.width = 0;
+                                canvas.height = 0;
+                                canvas = null;
                                 reject(new Error('การแปลงรูปภาพล้มเหลว'));
                                 return;
                             }
 
                             const reader = new FileReader();
                             reader.onloadend = () => {
-                                resolve(reader.result); // Base64 for LocalStorage
+                                // Explicit cleanup of canvas memory immediately after use
+                                if (canvas) {
+                                    canvas.width = 0;
+                                    canvas.height = 0;
+                                    canvas = null;
+                                }
+                                resolve(reader.result);
                             };
                             reader.onerror = reject;
                             reader.readAsDataURL(blob);
-                        }, 'image/jpeg', 0.5); // 0.5 quality for mobile efficiency
+                        }, 'image/jpeg', 0.4); // 0.4 quality for ultra-efficient storage
                     }, 0);
                 });
             } catch (err) {
+                if (canvas) {
+                    canvas.width = 0;
+                    canvas.height = 0;
+                    canvas = null;
+                }
                 URL.revokeObjectURL(objectUrl);
                 reject(err);
             }
