@@ -346,23 +346,24 @@ function renderWorkflow() {
             });
             subTasksHtml += `</div>`;
         }
-        <div class="timeline-item ${item.status}">
-            <div class="timeline-dot"></div>
-            <div class="timeline-content">
-                <div class="flex-between">
-                    <h4 style="flex:1;">${item.step}</h4>
-                    <div style="display:flex; gap:0.5rem; align-items:center;">
-                        ${badge}
-                        <button class="btn btn-icon" style="width:25px; height:25px; font-size:0.9rem; background: var(--info-color);" onclick="duplicateWorkflow(${item.id})"><i class='bx bx-copy'></i></button>
-                        <button class="btn btn-icon" style="width:25px; height:25px; font-size:0.9rem; background: var(--warning-color);" onclick="editWorkflow(${item.id})"><i class='bx bx-edit'></i></button>
-                        <button class="btn btn-icon" style="width:25px; height:25px; font-size:0.9rem; background: var(--danger-color);" onclick="deleteWorkflow(${item.id})"><i class='bx bx-trash'></i></button>
+        list.innerHTML += `
+            <div class="timeline-item ${item.status}">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                    <div class="flex-between">
+                        <h4 style="flex:1;">${item.step}</h4>
+                        <div style="display:flex; gap:0.5rem; align-items:center;">
+                            ${badge}
+                            <button class="btn btn-icon" style="width:25px; height:25px; font-size:0.9rem; background: var(--info-color);" onclick="duplicateWorkflow(${item.id})"><i class='bx bx-copy'></i></button>
+                            <button class="btn btn-icon" style="width:25px; height:25px; font-size:0.9rem; background: var(--warning-color);" onclick="editWorkflow(${item.id})"><i class='bx bx-edit'></i></button>
+                            <button class="btn btn-icon" style="width:25px; height:25px; font-size:0.9rem; background: var(--danger-color);" onclick="deleteWorkflow(${item.id})"><i class='bx bx-trash'></i></button>
+                        </div>
                     </div>
+                    <p class="subtitle mt-3"><i class='bx bx-calendar'></i> ${item.date}</p>
+                    ${subTasksHtml}
+                    ${imgTag}
                 </div>
-                <p class="subtitle mt-3"><i class='bx bx-calendar'></i> ${item.date}</p>
-                ${subTasksHtml}
-                ${imgTag}
             </div>
-        </div>
         `;
     });
 }
@@ -385,15 +386,14 @@ function editWorkflow(id) {
     tempSubTasks = item.subTasks ? [...item.subTasks] : [];
     renderTempSubTasks();
 
-    // Load image preview if exists
     if (item.image) {
         const preview = document.getElementById('wf-preview-container');
         preview.innerHTML = `
-            < img src = "${item.image}" style = "width: 100%; max-height: 250px; object-fit: contain; border-radius: 8px; border: 1px solid var(--glass-border);" >
+                <img src="${item.image}" style="width: 100%; max-height: 250px; object-fit: contain; border-radius: 8px; border: 1px solid var(--glass-border);">
                 <button onclick="clearDualImagePreview('wf-camera', 'wf-gallery', 'wf-preview-container', 'wf-image-status')" style="position: absolute; top: 10px; right: 10px; background: var(--danger-color); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">
                     <i class='bx bx-trash'></i>
                 </button>
-        `;
+            `;
         preview.style.display = 'block';
     }
 
@@ -407,6 +407,23 @@ function deleteWorkflow(id) {
         renderWorkflow();
         showToast('ลบขั้นตอนงานสำเร็จ', 'info');
     }
+}
+
+function duplicateWorkflow(id) {
+    const item = currentState.workflow.find(w => w.id === id);
+    if (!item) return;
+
+    const newItem = {
+        ...JSON.parse(JSON.stringify(item)), // Deep copy
+        id: Date.now(),
+        step: item.step + " (สำเนา)",
+        date: "วันนี้"
+    };
+
+    currentState.workflow.push(newItem);
+    saveStateToStorage();
+    renderWorkflow();
+    showToast('คัดลอกขั้นตอนงานสำเร็จ', 'success');
 }
 
 // --- ESTIMATION FUNCTIONALITY ---
@@ -452,7 +469,7 @@ function addFromEstimate(index) {
     const item = fenceEstimateData[index];
     currentState.materials.push({
         id: Date.now(),
-        name: `${ item.name } (ประมาณการ)`,
+        name: `${item.name} (ประมาณการ)`,
         price: item.avgPrice,
         location: "ประมาณการเบื้องต้น",
         image: null
@@ -670,7 +687,7 @@ function formatTime(totalSeconds) {
     const h = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
     const m = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
     const s = (totalSeconds % 60).toString().padStart(2, '0');
-    return `${ h }:${ m }:${ s } `;
+    return `${h}:${m}:${s} `;
 }
 
 function updateTimerDisplay() {
@@ -732,7 +749,7 @@ function logTimeSpan(actionStart, actionEnd, seconds) {
         id: Date.now(),
         date: date,
         duration: timeSpent,
-        desc: `บันทึกกิจกรรม(${ actionStart } - ${ actionEnd })`
+        desc: `บันทึกกิจกรรม(${actionStart} - ${actionEnd})`
     });
     saveStateToStorage();
     renderTimeLogs();
@@ -988,7 +1005,7 @@ function checkoutWorkersDay() {
     });
 
     saveStateToStorage();
-    alert(`บันทึกยอดรายวันสำเร็จ(${ count } คน) \nระบบได้นำค่าแรงไปทบยอดสะสมและล้างสถานะเข้างานสำหรับวันพรุ่งนี้แล้ว`);
+    alert(`บันทึกยอดรายวันสำเร็จ(${count} คน) \nระบบได้นำค่าแรงไปทบยอดสะสมและล้างสถานะเข้างานสำหรับวันพรุ่งนี้แล้ว`);
     renderWorkers();
 }
 
@@ -1216,13 +1233,13 @@ function calculateCompare() {
         if (costPerUnitA < costPerUnitB) {
             diffValue = costPerUnitB - costPerUnitA;
             diffPercent = (diffValue / costPerUnitB) * 100;
-            html += `< div style = "font-weight:bold; color:var(--success-color);" > <i class='bx bx-check-circle'></i> ${ nameA } ประหยัดกว่า ${ diffPercent.toFixed(1) }%</div > `;
+            html += `< div style = "font-weight:bold; color:var(--success-color);" > <i class='bx bx-check-circle'></i> ${nameA} ประหยัดกว่า ${diffPercent.toFixed(1)}%</div > `;
             bestStore = nameA;
             bestPrice = priceA;
         } else if (costPerUnitB < costPerUnitA) {
             diffValue = costPerUnitA - costPerUnitB;
             diffPercent = (diffValue / costPerUnitA) * 100;
-            html += `< div style = "font-weight:bold; color:var(--success-color);" > <i class='bx bx-check-circle'></i> ${ nameB } ประหยัดกว่า ${ diffPercent.toFixed(1) }%</div > `;
+            html += `< div style = "font-weight:bold; color:var(--success-color);" > <i class='bx bx-check-circle'></i> ${nameB} ประหยัดกว่า ${diffPercent.toFixed(1)}%</div > `;
             bestStore = nameB;
             bestPrice = priceB;
         } else {
@@ -1235,7 +1252,7 @@ function calculateCompare() {
             storeName: bestStore,
             price: bestPrice,
             productName: document.getElementById('compare-name').value || 'สินค้าจากการเปรียบเทียบ',
-            location: `${ nameA } vs ${ nameB } `
+            location: `${nameA} vs ${nameB} `
         };
 
         detailsDiv.innerHTML = html;
@@ -1258,7 +1275,7 @@ function saveToMaterialsFromCompare() {
     });
 
     saveStateToStorage();
-    alert(`บันทึก ${ currentState.compareResult.productName } จากร้าน ${ currentState.compareResult.storeName } ในราคา ฿${ currentState.compareResult.price } ลงรายการจัดซื้อเรียบร้อยแล้ว`);
+    alert(`บันทึก ${currentState.compareResult.productName} จากร้าน ${currentState.compareResult.storeName} ในราคา ฿${currentState.compareResult.price} ลงรายการจัดซื้อเรียบร้อยแล้ว`);
 
     // Reset and hide compare view
     document.getElementById('store-a-price').value = '';
@@ -1310,7 +1327,7 @@ function renderStores() {
         if (store.location && (store.location.startsWith('http://') || store.location.startsWith('https://'))) {
             locationHtml = `< a href = "${store.location}" target = "_blank" style = "color: var(--primary-color); text-decoration: underline;" > <i class='bx bx-map-alt'></i> ดูแผนที่</a > `;
         } else if (store.location) {
-            locationHtml = `< i class='bx bx-map' ></i > ${ store.location } `;
+            locationHtml = `< i class='bx bx-map' ></i > ${store.location} `;
         }
 
         let phoneHtml = '';
@@ -1331,8 +1348,8 @@ function renderStores() {
                         <button class="btn btn-icon" style="width: 28px; height: 28px; font-size: 0.8rem; background: var(--danger-color);" onclick="deleteStore(${store.id})"><i class='bx bx-trash'></i></button>
                     </div>
                 </div>
-                ${ store.location ? `<div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; line-height: 1.4;">${locationHtml}</div>` : '' }
-                ${ store.note ? `<div style="font-size: 0.85rem; padding: 0.5rem; background: rgba(0,0,0,0.2); border-left: 3px solid var(--warning-color); border-radius: 4px;">${store.note}</div>` : '' }
+                ${store.location ? `<div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; line-height: 1.4;">${locationHtml}</div>` : ''}
+                ${store.note ? `<div style="font-size: 0.85rem; padding: 0.5rem; background: rgba(0,0,0,0.2); border-left: 3px solid var(--warning-color); border-radius: 4px;">${store.note}</div>` : ''}
             </div >
             `;
     });
@@ -1533,11 +1550,11 @@ function handleDualImage(inputElement, otherInputId, previewId, statusId) {
         const reader = new FileReader();
         reader.onload = function (e) {
             previewContainer.innerHTML = `
-            < img src = "${e.target.result}" style = "width: 100%; max-height: 250px; object-fit: contain; border-radius: 8px; border: 1px solid var(--glass-border); margin-top: 10px;" >
+                <img src="${e.target.result}" style="width: 100%; max-height: 250px; object-fit: contain; border-radius: 8px; border: 1px solid var(--glass-border); margin-top: 10px;">
                 <button type="button" onclick="clearDualImagePreview('${inputElement.id}', '${otherInputId}', '${previewId}', '${statusId}')" style="position: absolute; top: 10px; right: 10px; background: var(--danger-color); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">
                     <i class='bx bx-trash'></i>
                 </button>
-        `;
+            `;
             previewContainer.style.display = 'block';
             if (statusContainer) statusContainer.style.display = 'block';
         };
