@@ -199,6 +199,10 @@ function closeModal(id) {
         p.style.display = 'none';
     });
 
+    // Clear image status messages
+    const statuses = document.getElementById(id).querySelectorAll('[id$="-image-status"]');
+    statuses.forEach(s => s.style.display = 'none');
+
     // Reset subtasks if it's the workflow modal
     if (id === 'add-workflow-modal') {
         tempSubTasks = [];
@@ -238,6 +242,7 @@ function deleteMaterial(id) {
         currentState.materials = currentState.materials.filter(m => m.id !== id);
         saveStateToStorage();
         renderMaterials();
+        showToast('ลบรายการวัสดุสำเร็จ', 'info');
     }
 }
 
@@ -245,14 +250,17 @@ async function addMaterial() {
     const name = document.getElementById('mat-name').value;
     const price = document.getElementById('mat-price').value;
     const location = document.getElementById('mat-location').value;
-    const imageInput = document.getElementById('mat-image');
+    const cameraInput = document.getElementById('mat-camera');
+    const galleryInput = document.getElementById('mat-gallery');
 
     if (!name) return alert("กรุณาใส่ชื่อรายการ");
 
     let imageData = null;
-    if (imageInput.files && imageInput.files[0]) {
+    let activeInput = cameraInput.files && cameraInput.files[0] ? cameraInput : (galleryInput.files && galleryInput.files[0] ? galleryInput : null);
+
+    if (activeInput && activeInput.files[0]) {
         try {
-            imageData = await readAndCompressImage(imageInput.files[0]);
+            imageData = await readAndCompressImage(activeInput.files[0]);
         } catch (e) {
             console.warn("Could not read image", e);
         }
@@ -291,6 +299,7 @@ async function addMaterial() {
     saveStateToStorage();
     renderMaterials();
     closeModal('add-material-modal');
+    showToast('บันทึกรายการวัสดุสำเร็จ', 'success');
 }
 
 // --- WORKFLOW FUNCTIONALITY ---
@@ -393,6 +402,7 @@ function deleteWorkflow(id) {
         currentState.workflow = currentState.workflow.filter(w => w.id !== id);
         saveStateToStorage();
         renderWorkflow();
+        showToast('ลบขั้นตอนงานสำเร็จ', 'info');
     }
 }
 
@@ -459,7 +469,7 @@ function applyTemplate() {
             { step: '3. เตรียมพื้นที่และขุดหลุมวางฐานราก', subTasks: ['เคลียร์พื้นที่แนวก่อสร้าง', 'ขุดหลุมฐานราก (ฟุตติ้ง)', 'วางตะแกรงเหล็กและเทลีน'] },
             { step: '4. ติดตั้งเสารั้วและเทคานคอดิน', subTasks: ['ตั้งระดับเสารั้ว', 'เข้าแบบเทคานคอดิน', 'ผูกเหล็กเสริมคาน'] },
             { step: '5. ก่อผนังรั้ว ฉาบปูน และทาสี', subTasks: ['ก่อบล็อก/อิฐมอญ', 'จับเสี้ยมและฉาบเรียบ', 'ทาสีรองพื้นกันด่าง'] },
-            { step: '6. ตรวจสอบความเรียบร้อยและปรับภูมิทัศน์', subTasks: ['ตรวจสอบรอยร้าว/สี', 'เคลียร์เศษวัสดุหน้างาน', 'ปรับระดับดินรอบรั้ว'] }
+            { step: '6. ตรวจสอบความเรียบร้อยและปรับภูมิทัศน์', subTasks: ['ตรวจสอบรอยร้าว/สี', 'เคลียร์เศษวัสดุหน้างาน', 'ปรับระดับดินดินรอบรั้ว'] }
         ];
 
         let confirmMsg = confirm("ระบบจะเพิ่มขั้นตอนงานทำรั้วมาตรฐานจำนวน 6 ขั้นตอน พร้อมรายการตรวจสอบย่อย ยืนยันใช่ไหม?");
@@ -498,15 +508,18 @@ async function saveWorkflow() {
     const step = document.getElementById('wf-step').value;
     const date = document.getElementById('wf-date').value || "ไม่ระบุ";
     const status = document.getElementById('wf-status').value;
-    const imageInput = document.getElementById('wf-image');
+    const cameraInput = document.getElementById('wf-camera');
+    const galleryInput = document.getElementById('wf-gallery');
 
     if (!step) return alert("กรุณาใส่ชื่อกระบวนการ");
 
     let imageData = null;
+    let activeInput = cameraInput.files && cameraInput.files[0] ? cameraInput : (galleryInput.files && galleryInput.files[0] ? galleryInput : null);
+
     // Check if there's a new image selected
-    if (imageInput.files && imageInput.files[0]) {
+    if (activeInput && activeInput.files[0]) {
         try {
-            imageData = await readAndCompressImage(imageInput.files[0]);
+            imageData = await readAndCompressImage(activeInput.files[0]);
         } catch (e) {
             console.warn("Could not read image", e);
         }
@@ -543,6 +556,7 @@ async function saveWorkflow() {
     saveStateToStorage();
     renderWorkflow();
     closeModal('add-workflow-modal');
+    showToast('บันทึกขั้นตอนงานสำเร็จ', 'success');
 }
 
 // --- SUB-TASKS LOGIC ---
@@ -586,7 +600,7 @@ function toggleSubTask(workflowId, subTaskIndex) {
     }
 }
 
-// --- IMAGE PREVIEW LOGIC ---
+// --- IMAGE PREVIEW LOGIC (LEGACY, KEPT FOR BACKWARD COMPATIBILITY IF NEEDED) ---
 function handleImagePreview(event, previewId) {
     const file = event.target.files[0];
     if (!file) return;
@@ -596,7 +610,7 @@ function handleImagePreview(event, previewId) {
         const container = document.getElementById(previewId);
         container.innerHTML = `
             <img src="${e.target.result}" style="width: 100%; max-height: 250px; object-fit: contain; border-radius: 8px; border: 1px solid var(--glass-border); margin-top: 10px;">
-            <button onclick="clearImagePreview('${event.target.id}', '${previewId}')" style="position: absolute; top: 20px; right: 10px; background: var(--danger-color); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">
+            <button onclick="clearImagePreview('${event.target.id}', '${previewId}')" style="position: absolute; top: 10px; right: 10px; background: var(--danger-color); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">
                 <i class='bx bx-trash'></i>
             </button>
         `;
@@ -774,6 +788,7 @@ function saveTimeLogEdit() {
     saveStateToStorage();
     renderTimeLogs();
     closeModal('edit-timelog-modal');
+    showToast('บันทึกบันทึกเวลาสำเร็จ', 'success');
 }
 
 function deleteTimeLog(id) {
@@ -781,6 +796,7 @@ function deleteTimeLog(id) {
         currentState.timeLogs = currentState.timeLogs.filter(l => l.id !== id);
         saveStateToStorage();
         renderTimeLogs();
+        showToast('ลบบันทึกเวลาสำเร็จ', 'info');
     }
 }
 
@@ -888,6 +904,7 @@ function deleteWorker(id) {
         currentState.workers = currentState.workers.filter(w => w.id !== id);
         saveStateToStorage();
         renderWorkers();
+        showToast('ลบพนักงานสำเร็จ', 'info');
     }
 }
 
@@ -922,6 +939,7 @@ function saveWorker() {
     saveStateToStorage();
     renderWorkers();
     closeModal('add-worker-modal');
+    showToast('บันทึกข้อมูลพนักงานสำเร็จ', 'success');
 }
 
 let activeWorkerId = null;
@@ -950,6 +968,7 @@ function saveWorkerFinancials() {
     saveStateToStorage();
     renderWorkers();
     closeModal('edit-wage-modal');
+    showToast('บันทึกข้อมูลการเงินพนักงานสำเร็จ', 'success');
 }
 
 function checkoutWorkersDay() {
@@ -977,6 +996,7 @@ function clearWageCycle() {
         saveStateToStorage();
         renderWorkers();
         alert('ล้างรอบบิลค่าแรงเรียบร้อยแล้ว');
+        showToast('ล้างรอบบิลค่าแรงสำเร็จ', 'info');
     }
 }
 
@@ -1349,6 +1369,8 @@ function deleteStore(id) {
         currentState.stores = currentState.stores.filter(s => s.id !== id);
         saveStateToStorage();
         renderStores();
+        updateStoreDatalist();
+        showToast('ลบร้านค้าสำเร็จ', 'info');
     }
 }
 
@@ -1457,4 +1479,82 @@ function exportWorkersCSV() {
     document.body.appendChild(link);
     link.click();
     link.remove();
+}
+
+// --- GLOBAL UTILITIES ---
+let toastTimeout;
+function showToast(message, type = 'success') {
+    const toast = document.getElementById('toast-notification');
+    const msgElement = document.getElementById('toast-message');
+    const iconElement = document.getElementById('toast-icon');
+
+    if (!toast) return;
+
+    // Reset classes
+    toast.className = 'toast';
+    toast.classList.add(type);
+
+    // Set icon based on type
+    if (type === 'success') {
+        iconElement.className = 'bx bx-check-circle';
+    } else if (type === 'error') {
+        iconElement.className = 'bx bx-x-circle';
+    } else {
+        iconElement.className = 'bx bx-info-circle';
+    }
+
+    msgElement.textContent = message;
+
+    // Show toast
+    toast.classList.add('active');
+
+    // Hide after 3 seconds
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => {
+        toast.classList.remove('active');
+    }, 3000);
+}
+
+function handleDualImage(inputElement, otherInputId, previewId, statusId) {
+    const file = inputElement.files[0];
+    const previewContainer = document.getElementById(previewId);
+    const statusContainer = document.getElementById(statusId);
+
+    // Clear the other input so only one file is selected
+    const otherInput = document.getElementById(otherInputId);
+    if (otherInput) otherInput.value = '';
+
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            previewContainer.innerHTML = `
+                <img src="${e.target.result}" style="width: 100%; max-height: 250px; object-fit: contain; border-radius: 8px; border: 1px solid var(--glass-border); margin-top: 10px;">
+                <button type="button" onclick="clearDualImagePreview('${inputElement.id}', '${otherInputId}', '${previewId}', '${statusId}')" style="position: absolute; top: 10px; right: 10px; background: var(--danger-color); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">
+                    <i class='bx bx-trash'></i>
+                </button>
+            `;
+            previewContainer.style.display = 'block';
+            if (statusContainer) statusContainer.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    } else {
+        clearDualImagePreview(inputElement.id, otherInputId, previewId, statusId);
+    }
+}
+
+function clearDualImagePreview(inputId1, inputId2, previewId, statusId) {
+    const input1 = document.getElementById(inputId1);
+    const input2 = document.getElementById(inputId2);
+    const previewContainer = document.getElementById(previewId);
+    const statusContainer = document.getElementById(statusId);
+
+    if (input1) input1.value = '';
+    if (input2) input2.value = '';
+
+    if (previewContainer) {
+        previewContainer.innerHTML = '';
+        previewContainer.style.display = 'none';
+    }
+
+    if (statusContainer) statusContainer.style.display = 'none';
 }

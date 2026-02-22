@@ -11,6 +11,12 @@
 </head>
 
 <body>
+    <!-- Global Toast Notification -->
+    <div id="toast-notification" class="toast">
+        <i class='bx bx-check-circle' id="toast-icon"></i>
+        <span id="toast-message">แจ้งเตือน</span>
+    </div>
+
     <div id="app">
         <!-- Header -->
         <header class="glass-header">
@@ -424,13 +430,35 @@
                         <datalist id="store-locations-list"></datalist>
                     </div>
                     <div class="form-group">
-                        <label>แนบรูปถ่าย / เปิดกล้อง</label>
-                        <input type="file" id="mat-image" accept="image/*" capture="environment"
-                            onchange="handleImagePreview(event, 'mat-preview-container')"
-                            style="width: 100%; padding: 0.5rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0, 0, 0, 0.2); color: white;">
-                    </div>
-                    <div id="mat-preview-container" style="margin-bottom: 1rem; display: none; position: relative;">
-                        <!-- Preview will appear here -->
+                        <label>แนบรูปภาพใบเสร็จ / สินค้า</label>
+                        <!-- Hidden inputs -->
+                        <input type="file" id="mat-camera" accept="image/*" capture="environment" style="display: none;"
+                            onchange="handleDualImage(this, 'mat-gallery', 'mat-preview-container', 'mat-image-status')">
+                        <input type="file" id="mat-gallery" accept="image/*" style="display: none;"
+                            onchange="handleDualImage(this, 'mat-camera', 'mat-preview-container', 'mat-image-status')">
+
+                        <!-- Visible Action Buttons -->
+                        <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <button type="button" class="btn btn-primary"
+                                style="flex: 1; padding: 0.75rem; background: var(--primary-color);"
+                                onclick="document.getElementById('mat-camera').click()">
+                                <i class='bx bx-camera' style="font-size: 1.2rem; vertical-align: middle;"></i> ถ่ายภาพ
+                            </button>
+                            <button type="button" class="btn btn-warning"
+                                style="flex: 1; padding: 0.75rem; background: var(--warning-color); color: white;"
+                                onclick="document.getElementById('mat-gallery').click()">
+                                <i class='bx bx-images' style="font-size: 1.2rem; vertical-align: middle;"></i>
+                                เลือกอัลบั้ม
+                            </button>
+                        </div>
+
+                        <!-- Success Status & Preview -->
+                        <div id="mat-image-status"
+                            style="display: none; color: var(--success-color); font-size: 0.85rem; margin-bottom: 0.5rem; text-align: center;">
+                            <i class='bx bx-check-circle'></i> แนบรูปภาพสำเร็จ
+                        </div>
+                        <div id="mat-preview-container" style="display: none; position: relative; margin-top: 0.5rem;">
+                        </div>
                     </div>
                     <button class="btn btn-primary w-100" onclick="addMaterial()">บันทึกรายการ</button>
                 </div>
@@ -506,13 +534,35 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>แนบรูปถ่าย / เปิดกล้อง</label>
-                        <input type="file" id="wf-image" accept="image/*" capture="environment"
-                            onchange="handleImagePreview(event, 'wf-preview-container')"
-                            style="width: 100%; padding: 0.5rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0, 0, 0, 0.2); color: white;">
-                    </div>
-                    <div id="wf-preview-container" style="margin-bottom: 1rem; display: none; position: relative;">
-                        <!-- Preview will appear here -->
+                        <label>แนบรูปภาพหน้างาน / หลักฐาน</label>
+                        <!-- Hidden inputs -->
+                        <input type="file" id="wf-camera" accept="image/*" capture="environment" style="display: none;"
+                            onchange="handleDualImage(this, 'wf-gallery', 'wf-preview-container', 'wf-image-status')">
+                        <input type="file" id="wf-gallery" accept="image/*" style="display: none;"
+                            onchange="handleDualImage(this, 'wf-camera', 'wf-preview-container', 'wf-image-status')">
+
+                        <!-- Visible Action Buttons -->
+                        <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <button type="button" class="btn btn-primary"
+                                style="flex: 1; padding: 0.75rem; background: var(--primary-color);"
+                                onclick="document.getElementById('wf-camera').click()">
+                                <i class='bx bx-camera' style="font-size: 1.2rem; vertical-align: middle;"></i> ถ่ายภาพ
+                            </button>
+                            <button type="button" class="btn btn-warning"
+                                style="flex: 1; padding: 0.75rem; background: var(--warning-color); color: white;"
+                                onclick="document.getElementById('wf-gallery').click()">
+                                <i class='bx bx-images' style="font-size: 1.2rem; vertical-align: middle;"></i>
+                                เลือกอัลบั้ม
+                            </button>
+                        </div>
+
+                        <!-- Success Status & Preview -->
+                        <div id="wf-image-status"
+                            style="display: none; color: var(--success-color); font-size: 0.85rem; margin-bottom: 0.5rem; text-align: center;">
+                            <i class='bx bx-check-circle'></i> แนบรูปภาพสำเร็จ
+                        </div>
+                        <div id="wf-preview-container" style="display: none; position: relative; margin-top: 0.5rem;">
+                        </div>
                     </div>
                     <button class="btn btn-primary w-100" style="margin-top:1rem;"
                         onclick="saveWorkflow()">บันทึกงาน</button>
