@@ -89,8 +89,7 @@ const pages = {
     compare: "เปรียบเทียบราคา",
     estimate: "ประมาณการรั้ว",
     stores: "สมุดติดต่อร้านค้า",
-    rentals: 'เครื่องจักร & ของเช่า',
-    calendar: 'ปฏิทินงาน'
+    rentals: 'เครื่องจักร & ของเช่า'
 };
 
 function navigate(viewId, navElement = null) {
@@ -116,7 +115,6 @@ function navigate(viewId, navElement = null) {
     }
 
     if (viewId === 'estimate') renderEstimation();
-    if (viewId === 'calendar') renderCalendar();
     if (viewId === 'home') checkRentalAlerts();
 }
 
@@ -328,6 +326,8 @@ async function addMaterial() {
 // --- WORKFLOW FUNCTIONALITY ---
 function renderWorkflow() {
     const list = document.getElementById('workflow-list');
+    if (!list) return;
+
     const searchTerm = (document.getElementById('search-workflow')?.value || '').toLowerCase();
     const filterStatus = document.getElementById('filter-workflow')?.value || 'all';
 
@@ -340,53 +340,94 @@ function renderWorkflow() {
     });
 
     if (filteredWorkflow.length === 0) {
-        list.innerHTML = `<p style="text-align: center; color: var(--text-secondary); margin-top: 1rem;">ไม่พบกระบวนการทำงาน</p>`;
+        list.innerHTML = `<div style="text-align: center; padding: 3rem 1rem; opacity: 0.6;">
+            <i class='bx bx-search' style="font-size: 3rem; margin-bottom: 1rem;"></i>
+            <p>ไม่พบรายการที่ระบุ</p>
+        </div>`;
         return;
     }
 
     filteredWorkflow.forEach(item => {
-        let badge = '';
-        if (item.status === 'completed') badge = `<span class="badge badge-success">เสร็จสิ้น</span>`;
-        else if (item.status === 'active') badge = `<span class="badge badge-primary">กำลังทำ</span>`;
-        else badge = `<span class="badge" style="background: rgba(255,255,255,0.1)">รอ</span>`;
+        const isCompleted = item.status === 'completed';
+        const isActive = item.status === 'active';
 
-        let imgTag = item.image ? `<div style="margin-top: 0.75rem; border-radius: 8px; overflow: hidden; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2);"><img src="${item.image}" style="width: 100%; display: block; max-height: 200px; object-fit: contain;" alt="work photo"></div>` : '';
+        // Status formatting
+        let statusBadgeClass = 'badge-secondary';
+        let statusText = 'รอดำเนินการ';
+        if (isActive) { statusBadgeClass = 'badge-primary'; statusText = 'กำลังทำ'; }
+        if (isCompleted) { statusBadgeClass = 'badge-success'; statusText = 'เสร็จสิ้น'; }
 
-        let subTasksHtml = '';
+        // Subtasks rendering
+        let subtasksHtml = '';
         if (item.subTasks && item.subTasks.length > 0) {
-            subTasksHtml = `<div class="subtask-timeline" style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 8px; border: 1px solid var(--glass-border);">`;
-            subTasksHtml += `<div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">รายการย่อย:</div>`;
+            subtasksHtml = `<div class="workflow-subtasks-new">`;
             item.subTasks.forEach((st, idx) => {
-                const isDone = st.completed ? 'checked' : '';
-                subTasksHtml += `
-                    <label style="display: flex; align-items: flex-start; gap: 0.75rem; margin-bottom: 0.75rem; padding: 0.5rem; border-radius: 8px; background: rgba(0,0,0,0.1); cursor: pointer; color: ${st.completed ? 'var(--success-color)' : 'var(--text-primary)'}; opacity: ${st.completed ? '0.8' : '1'}; transition: all 0.2s; word-break: break-word; min-height: 44px;">
-                        <input type="checkbox" ${isDone} onchange="toggleSubTask(${item.id}, ${idx})" style="cursor: pointer; width: 22px; height: 22px; flex-shrink: 0; margin-top: 2px;">
-                        <span style="${st.completed ? 'text-decoration: line-through;' : ''} line-height: 1.4; flex: 1;">${st.text}</span>
-                    </label>
+                subtasksHtml += `
+                    <div class="subtask-item-new ${st.completed ? 'done' : ''}" onclick="event.stopPropagation(); toggleSubTask(${item.id}, ${idx})">
+                        <div class="subtask-check-new"><i class='bx bx-check'></i></div>
+                        <span style="${st.completed ? 'text-decoration: line-through;' : ''}">${st.text}</span>
+                    </div>
                 `;
             });
-            subTasksHtml += `</div>`;
+            subtasksHtml += `</div>`;
         }
-        list.innerHTML += `
-            <div class="timeline-item ${item.status}">
-                <div class="timeline-dot"></div>
-                <div class="timeline-content">
-                    <div class="flex-between">
-                        <h4 style="flex:1;">${item.step}</h4>
-                        <div style="display:flex; gap:0.5rem; align-items:center;">
-                            ${badge}
-                            <button class="btn btn-icon" style="width:25px; height:25px; font-size:0.9rem; background: var(--info-color);" onclick="duplicateWorkflow(${item.id})"><i class='bx bx-copy'></i></button>
-                            <button class="btn btn-icon" style="width:25px; height:25px; font-size:0.9rem; background: var(--warning-color);" onclick="editWorkflow(${item.id})"><i class='bx bx-edit'></i></button>
-                            <button class="btn btn-icon" style="width:25px; height:25px; font-size:0.9rem; background: var(--danger-color);" onclick="deleteWorkflow(${item.id})"><i class='bx bx-trash'></i></button>
-                        </div>
+
+        // Image rendering - modern thumb
+        const imgSource = item.image ? item.image : null;
+        const imgHtml = imgSource ? `
+            <div class="workflow-img-thumb" onclick="event.stopPropagation(); viewFullImage('${imgSource}')">
+                <img src="${imgSource}" loading="lazy" alt="${item.step}">
+            </div>
+        ` : '';
+
+        const card = document.createElement('div');
+        card.className = `workflow-card ${item.status}`;
+        card.onclick = () => editWorkflow(item.id);
+
+        card.innerHTML = `
+            <div class="workflow-card-main">
+                ${imgHtml}
+                <div class="workflow-content-new">
+                    <div class="workflow-title-new">${item.step}</div>
+                    <div class="workflow-badge-row">
+                        <span class="badge ${statusBadgeClass}">${statusText}</span>
+                        <span style="font-size: 0.8rem; color: var(--text-secondary);"><i class='bx bx-calendar'></i> ${item.date}</span>
                     </div>
-                    <p class="subtitle mt-3"><i class='bx bx-calendar'></i> ${item.date}</p>
-                    ${subTasksHtml}
-                    ${imgTag}
                 </div>
             </div>
+            ${subtasksHtml}
+            <div class="workflow-footer-actions">
+                <button class="btn btn-icon" style="background: rgba(59, 130, 246, 0.1); color: var(--primary-color);" onclick="event.stopPropagation(); duplicateWorkflow(${item.id})"><i class='bx bx-copy'></i></button>
+                <button class="btn btn-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--success-color);" onclick="event.stopPropagation(); toggleWorkflowStatus(${item.id})"><i class='bx bx-check'></i></button>
+                <button class="btn btn-icon" style="background: rgba(239, 68, 68, 0.1); color: var(--danger-color);" onclick="event.stopPropagation(); deleteWorkflow(${item.id})"><i class='bx bx-trash'></i></button>
+            </div>
         `;
+        list.appendChild(card);
     });
+}
+
+function viewFullImage(src) {
+    const overlay = document.createElement('div');
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100vw';
+    overlay.style.height = '100vh';
+    overlay.style.background = 'rgba(0,0,0,0.95)';
+    overlay.style.zIndex = '10001';
+    overlay.style.display = 'flex';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+    overlay.style.padding = '20px';
+    overlay.onclick = () => overlay.remove();
+
+    overlay.innerHTML = `
+        <img src="${src}" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+        <div style="position: absolute; top: 25px; right: 25px; color: white; background: rgba(0,0,0,0.5); width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem;">
+            <i class='bx bx-x'></i>
+        </div>
+    `;
+    document.body.appendChild(overlay);
 }
 
 let activeWorkflowId = null;
@@ -1681,56 +1722,6 @@ function checkRentalAlerts() {
     });
 }
 
-// --- CALENDAR TIMELINE LOGIC ---
-function renderCalendar() {
-    const calendarDays = document.getElementById('calendar-days');
-    if (!calendarDays) return;
-    calendarDays.innerHTML = '';
-
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-
-    const monthNames = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
-        "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
-    document.getElementById('calendar-month-name').textContent = `${monthNames[currentMonth]} ${currentYear + 543}`;
-
-    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
-    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-
-    // Fill empty slots before first day
-    for (let i = 0; i < firstDay; i++) {
-        calendarDays.innerHTML += '<div class="calendar-day other-month"></div>';
-    }
-
-    // Fill actual days
-    for (let day = 1; day <= daysInMonth; day++) {
-        const isToday = day === now.getDate() && currentMonth === now.getMonth() && currentYear === now.getFullYear();
-
-        // Match workflow items
-        const rawToday = new Date(currentYear, currentMonth, day);
-        const dayStr = day.toString();
-        const monthShort = rawToday.toLocaleDateString('th-TH', { month: 'short' }).replace('.', '');
-
-        const items = currentState.workflow.filter(w => {
-            if (w.date === 'วันนี้' && isToday) return true;
-            // Simple string matching for now (e.g. "25 พ.ย.")
-            return w.date.includes(dayStr) && w.date.includes(monthShort);
-        });
-
-        let eventsHtml = '';
-        items.forEach(item => {
-            eventsHtml += `<div class="calendar-event event-${item.status}" title="${item.step}">${item.step}</div>`;
-        });
-
-        calendarDays.innerHTML += `
-            <div class="calendar-day ${isToday ? 'today' : ''}">
-                <div class="calendar-date-num">${day}</div>
-                ${eventsHtml}
-            </div>
-        `;
-    }
-}
 
 
 // --- RENTAL TRACKING FUNCTIONALITY ---
