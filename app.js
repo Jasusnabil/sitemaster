@@ -248,9 +248,16 @@ async function addMaterial() {
     if (!name) return alert("กรุณาใส่ชื่อรายการ");
 
     const btn = document.getElementById('save-material-btn');
+    const headerBtn = document.getElementById('save-material-header');
     const originalText = btn.textContent;
+    const originalHeaderText = headerBtn ? headerBtn.textContent : '';
+
     btn.disabled = true;
     btn.textContent = 'กำลังบันทึก...';
+    if (headerBtn) {
+        headerBtn.disabled = true;
+        headerBtn.textContent = '...';
+    }
 
     try {
         let imageData = null;
@@ -301,6 +308,10 @@ async function addMaterial() {
     } finally {
         btn.disabled = false;
         btn.textContent = originalText;
+        if (headerBtn) {
+            headerBtn.disabled = false;
+            headerBtn.textContent = originalHeaderText;
+        }
     }
 }
 
@@ -536,9 +547,16 @@ async function saveWorkflow() {
     if (!step) return alert("กรุณาใส่ชื่อกระบวนการ");
 
     const btn = document.getElementById('save-workflow-btn');
+    const headerBtn = document.getElementById('save-workflow-header');
     const originalText = btn.textContent;
+    const originalHeaderText = headerBtn ? headerBtn.textContent : '';
+
     btn.disabled = true;
     btn.textContent = 'กำลังประมวลผลรูปภาพ...';
+    if (headerBtn) {
+        headerBtn.disabled = true;
+        headerBtn.textContent = '...';
+    }
 
     try {
         let imageData = null;
@@ -587,6 +605,10 @@ async function saveWorkflow() {
     } finally {
         btn.disabled = false;
         btn.textContent = originalText;
+        if (headerBtn) {
+            headerBtn.disabled = false;
+            headerBtn.textContent = originalHeaderText;
+        }
     }
 }
 
@@ -1779,30 +1801,58 @@ function saveRental(id = null) {
     const deposit = document.getElementById('rental-deposit').value;
 
     if (!item || !ret) {
-        showToast('กรุณากรอกข้อมูลให้ครบถ้วน', 'danger');
+        showToast('กรุณากรอกข้อมูลให้ครบถ้วน (ต้องมีชื่อและวันคืน)', 'warning');
         return;
     }
 
-    if (id) {
-        const index = currentState.rentals.findIndex(r => r.id === id);
-        currentState.rentals[index] = { ...currentState.rentals[index], item, provider, startDate: start, returnDate: ret, price, deposit };
-    } else {
-        currentState.rentals.push({
-            id: Date.now(),
-            item,
-            provider,
-            startDate: start,
-            returnDate: ret,
-            price,
-            deposit,
-            status: 'active'
-        });
+    const btn = document.getElementById('save-rental-btn');
+    const headerBtn = document.getElementById('save-rental-header');
+    const originalText = btn ? btn.textContent : '';
+    const originalHeaderText = headerBtn ? headerBtn.textContent : '';
+
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'กำลังบันทึก...';
+    }
+    if (headerBtn) {
+        headerBtn.disabled = true;
+        headerBtn.textContent = '...';
     }
 
-    saveData();
-    renderRentals();
-    closeModal('add-rental-modal');
-    showToast('บันทึกข้อมูลสำเร็จ');
+    try {
+        if (id) {
+            const index = currentState.rentals.findIndex(r => r.id === id);
+            currentState.rentals[index] = { ...currentState.rentals[index], item, provider, startDate: start, returnDate: ret, price, deposit };
+        } else {
+            currentState.rentals.push({
+                id: Date.now(),
+                item,
+                provider,
+                startDate: start,
+                returnDate: ret,
+                price,
+                deposit,
+                status: 'active'
+            });
+        }
+
+        saveData();
+        renderRentals();
+        closeModal('add-rental-modal');
+        showToast('บันทึกข้อมูลสำเร็จ');
+    } catch (e) {
+        console.error("Save Rental Error", e);
+        showToast('เกิดข้อผิดพลาดในการบันทึก', 'danger');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+        if (headerBtn) {
+            headerBtn.disabled = false;
+            headerBtn.textContent = originalHeaderText;
+        }
+    }
 }
 
 function toggleRentalStatus(id) {
