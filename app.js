@@ -766,7 +766,7 @@ function renderTimeLogs() {
 
     currentState.timeLogs.forEach(log => {
         list.innerHTML += `
-            <div class="flex-item-list>
+            <div class="flex-item-list">
                 <div class="item-details" style="flex: 1;">
                     <h4>${log.desc}</h4>
                     <div class="item-meta">
@@ -779,7 +779,7 @@ function renderTimeLogs() {
                     <button class="btn btn-icon" style="width:30px; height:30px; font-size:1rem; background: var(--danger-color);" onclick="deleteTimeLog(${log.id})"><i class='bx bx-trash'></i></button>
                 </div>
             </div>
-            `;
+        `;
     });
 }
 
@@ -1036,7 +1036,7 @@ function calculateWages() {
             <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 0.25rem;">
                 <span><i class='bx bx-check' style="color:var(--success-color);"></i> ${w.name} (${w.role})</span>
                 <span style="color:var(--primary-color);">฿${w.wage}</span>
-            </div> `;
+            </div>`;
         }
     });
 
@@ -1050,7 +1050,7 @@ function calculateWages() {
                     <i class='bx bx-check-double'></i> ยืนยันจบวัน (ทบยอดสะสม)
                 </button>
             </div>
-    </div> `;
+    </div>`;
 
     document.getElementById('wage-report-content').innerHTML = presentCount > 0 ? reportHtml : "<p>ไม่มีพนักงานเข้างานวันนี้</p>";
     openModal('wage-report-modal');
@@ -1062,7 +1062,7 @@ function printGroupReport() {
     const dateStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
 
     let html = `
-            <h2 class="text-center" style="margin-bottom: 5px;"> รายงานสรุปค่าแรงทีมงาน</h2 >
+            <h2 class="text-center" style="margin-bottom: 5px;"> รายงานสรุปค่าแรงทีมงาน</h2>
         <p class="text-center" style="margin-bottom: 20px;">วันที่พิมพ์: ${dateStr}</p>
         <table class="print-table">
             <thead>
@@ -1299,7 +1299,7 @@ function updateStoreDatalist() {
     // Using Set to avoid duplicates if needed, but stores should be unique
     stores.forEach(store => {
         if (store.name) {
-            datalist.innerHTML += `<option value = "${store.name}></option> `;
+            datalist.innerHTML += `<option value="${store.name}"></option>`;
         }
     });
 }
