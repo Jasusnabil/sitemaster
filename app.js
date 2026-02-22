@@ -10,6 +10,7 @@ let currentState = {
         startTime: null
     },
     workers: [],
+    stores: [],
     compareResult: null
 };
 
@@ -51,6 +52,10 @@ document.addEventListener("DOMContentLoaded", () => {
     renderTimeLogs();
     renderWorkers(); // Initial render for workers
 
+    if (!currentState.stores) currentState.stores = [];
+    renderStores(); // Initial render for stores
+    updateStoreDatalist();
+
     // Resume timer if active in state
     if (currentState.timer.isActive) {
         const now = Date.now();
@@ -76,7 +81,8 @@ const pages = {
     time: "ลงเวลาทำงาน",
     attendance: "เช็คชื่อทีมงาน",
     compare: "เปรียบเทียบราคา",
-    estimate: "คำนวณวัสดุทำรั้ว"
+    estimate: "คำนวณวัสดุทำรั้ว",
+    stores: "สมุดติดต่อร้านค้า"
 };
 
 function navigate(viewId, navElement = null) {
@@ -190,7 +196,7 @@ function editMaterial(id) {
     if (mat.image) {
         const preview = document.getElementById('mat-preview-container');
         preview.innerHTML = `
-            <img src="${mat.image}" style="width: 100%; border-radius: 8px; border: 1px solid var(--glass-border); margin-top: 10px;">
+            <img src="${mat.image}" style="width: 100%; max-height: 250px; object-fit: contain; border-radius: 8px; border: 1px solid var(--glass-border); margin-top: 10px;">
             <button onclick="clearImagePreview('mat-image', 'mat-preview-container')" style="position: absolute; top: 20px; right: 10px; background: var(--danger-color); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">
                 <i class='bx bx-trash'></i>
             </button>
@@ -343,7 +349,7 @@ function editWorkflow(id) {
     if (item.image) {
         const preview = document.getElementById('wf-preview-container');
         preview.innerHTML = `
-            <img src="${item.image}" style="width: 100%; border-radius: 8px; border: 1px solid var(--glass-border);">
+            <img src="${item.image}" style="width: 100%; max-height: 250px; object-fit: contain; border-radius: 8px; border: 1px solid var(--glass-border);">
             <button onclick="clearImagePreview('wf-image', 'wf-preview-container')" style="position: absolute; top: 10px; right: 10px; background: var(--danger-color); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">
                 <i class='bx bx-trash'></i>
             </button>
@@ -561,7 +567,7 @@ function handleImagePreview(event, previewId) {
     reader.onload = function (e) {
         const container = document.getElementById(previewId);
         container.innerHTML = `
-            <img src="${e.target.result}" style="width: 100%; border-radius: 8px; border: 1px solid var(--glass-border); margin-top: 10px;">
+            <img src="${e.target.result}" style="width: 100%; max-height: 250px; object-fit: contain; border-radius: 8px; border: 1px solid var(--glass-border); margin-top: 10px;">
             <button onclick="clearImagePreview('${event.target.id}', '${previewId}')" style="position: absolute; top: 20px; right: 10px; background: var(--danger-color); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">
                 <i class='bx bx-trash'></i>
             </button>
@@ -772,9 +778,14 @@ function renderWorkers() {
                             <i class='bx bxs-user'></i>
                         </div>
                         <div class="item-details">
-                            <h4 style="margin: 0;">${worker.name}</h4>
+                            <h4 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                                ${worker.name}
+                                <button class="btn btn-icon" style="width: 24px; height: 24px; font-size: 0.8rem; background: var(--warning-color);" onclick="editWorkerInfo(${worker.id})"><i class='bx bx-edit'></i></button>
+                                <button class="btn btn-icon" style="width: 24px; height: 24px; font-size: 0.8rem; background: var(--danger-color);" onclick="deleteWorker(${worker.id})"><i class='bx bx-trash'></i></button>
+                            </h4>
                             <div class="item-meta" style="margin-top: 0.25rem;">
-                                ${worker.role} | ล่าสุด: ฿${worker.wage}
+                                <span class="badge ${worker.type === 'เหมาจ่าย' ? 'badge-warning' : 'badge-primary'}" style="font-size: 0.65rem; padding: 2px 6px;">${worker.type || worker.role || 'ทั่วไป'}</span>
+                                ${worker.type !== 'เหมาจ่าย' ? ` | ค่าแรง: ฿${worker.wage}` : ''}
                             </div>
                         </div>
                     </div>
@@ -811,22 +822,74 @@ function togglePresence(id) {
     }
 }
 
-function addWorker() {
+let activeEditWorkerId = null;
+
+function openAddWorkerModal() {
+    activeEditWorkerId = null;
+    document.getElementById('worker-name').value = '';
+    document.getElementById('worker-type').value = 'รายวัน';
+    document.getElementById('worker-wage').value = '';
+
+    document.getElementById('worker-modal-title').textContent = 'เพิ่มรายชื่อพนักงาน';
+    document.getElementById('save-worker-btn').textContent = 'บันทึกรายชื่อ';
+
+    document.getElementById('worker-wage-group').style.display = 'block';
+
+    openModal('add-worker-modal');
+}
+
+function editWorkerInfo(id) {
+    activeEditWorkerId = id;
+    const worker = currentState.workers.find(w => w.id === id);
+    if (!worker) return;
+
+    document.getElementById('worker-name').value = worker.name;
+    document.getElementById('worker-type').value = worker.type || worker.role || 'รายวัน';
+    document.getElementById('worker-wage').value = worker.wage;
+
+    document.getElementById('worker-modal-title').textContent = 'แก้ไขรายชื่อพนักงาน';
+    document.getElementById('save-worker-btn').textContent = 'บันทึกการแก้ไข';
+
+    document.getElementById('worker-wage-group').style.display = document.getElementById('worker-type').value === 'เหมาจ่าย' ? 'none' : 'block';
+
+    openModal('add-worker-modal');
+}
+
+function deleteWorker(id) {
+    if (confirm("คุณต้องการลบพนักงานคนนี้ใช่ไหม?\\nข้อมูลจะถูกลบทิ้งอย่างถาวร")) {
+        currentState.workers = currentState.workers.filter(w => w.id !== id);
+        saveStateToStorage();
+        renderWorkers();
+    }
+}
+
+function saveWorker() {
     const name = document.getElementById('worker-name').value;
-    const role = document.getElementById('worker-role').value;
+    const type = document.getElementById('worker-type').value;
     const wage = document.getElementById('worker-wage').value;
 
     if (!name) return alert("กรุณาใส่ชื่อพนักงาน");
 
-    currentState.workers.push({
-        id: Date.now(),
-        name,
-        role: role || "ทั่วไป",
-        wage: wage ? parseFloat(wage) : 350,
-        isPresent: true,
-        accumulatedWage: 0,
-        advancePayment: 0
-    });
+    if (activeEditWorkerId) {
+        const worker = currentState.workers.find(w => w.id === activeEditWorkerId);
+        if (worker) {
+            worker.name = name;
+            worker.type = type;
+            worker.role = type; // Keep for backward compatibility
+            worker.wage = type === 'เหมาจ่าย' ? 0 : (wage ? parseFloat(wage) : 350);
+        }
+    } else {
+        currentState.workers.push({
+            id: Date.now(),
+            name,
+            type: type,
+            role: type, // Keep for backward compatibility
+            wage: type === 'เหมาจ่าย' ? 0 : (wage ? parseFloat(wage) : 350),
+            isPresent: true,
+            accumulatedWage: 0,
+            advancePayment: 0
+        });
+    }
 
     saveStateToStorage();
     renderWorkers();
@@ -1152,6 +1215,151 @@ function saveToMaterialsFromCompare() {
 
     // Navigate back to materials to see the new item
     navigate('materials', document.querySelector('.bottom-nav .nav-item:nth-child(2)'));
+}
+
+// --- STORES DIRECTORY FUNCTIONALITY ---
+function updateStoreDatalist() {
+    const datalist = document.getElementById('store-locations-list');
+    if (!datalist) return;
+    datalist.innerHTML = '';
+
+    // Fallback array if undefined
+    const stores = currentState.stores || [];
+
+    // Using Set to avoid duplicates if needed, but stores should be unique
+    stores.forEach(store => {
+        if (store.name) {
+            datalist.innerHTML += `<option value="${store.name}"></option>`;
+        }
+    });
+}
+
+function renderStores() {
+    const list = document.getElementById('store-list');
+    if (!list) return;
+    const searchTerm = (document.getElementById('search-stores')?.value || '').toLowerCase();
+
+    list.innerHTML = '';
+
+    const filteredStores = (currentState.stores || []).filter(s => {
+        return (s.name && s.name.toLowerCase().includes(searchTerm)) ||
+            (s.location && s.location.toLowerCase().includes(searchTerm)) ||
+            (s.note && s.note.toLowerCase().includes(searchTerm));
+    });
+
+    if (filteredStores.length === 0) {
+        list.innerHTML = `<p style="text-align: center; color: var(--text-secondary); margin-top: 1rem;">ไม่พบรายชื่อร้านค้า</p>`;
+        return;
+    }
+
+    filteredStores.forEach(store => {
+        let locationHtml = store.location;
+        if (store.location && (store.location.startsWith('http://') || store.location.startsWith('https://'))) {
+            locationHtml = `<a href="${store.location}" target="_blank" style="color: var(--primary-color); text-decoration: underline;"><i class='bx bx-map-alt'></i> ดูแผนที่</a>`;
+        } else if (store.location) {
+            locationHtml = `<i class='bx bx-map'></i> ${store.location}`;
+        }
+
+        let phoneHtml = '';
+        if (store.phone) {
+            phoneHtml = `<a href="tel:${store.phone}" class="btn btn-success" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;"><i class='bx bxs-phone-call'></i> โทร</a>`;
+        }
+
+        list.innerHTML += `
+            <div class="card" style="margin-bottom: 0.75rem; padding: 1rem;">
+                <div class="flex-between" style="align-items: flex-start; margin-bottom: 0.5rem;">
+                    <div>
+                        <h3 style="color: var(--primary-color); font-size: 1.1rem; display: flex; align-items: center; gap: 0.25rem;"><i class='bx bx-store'></i> ${store.name}</h3>
+                        ${store.phone ? `<div style="color: var(--text-primary); font-size: 0.9rem; margin-top: 0.25rem;">${store.phone}</div>` : ''}
+                    </div>
+                    <div style="display: flex; gap: 0.25rem;">
+                        ${phoneHtml}
+                        <button class="btn btn-icon" style="width: 28px; height: 28px; font-size: 0.8rem; background: var(--warning-color);" onclick="editStore(${store.id})"><i class='bx bx-edit'></i></button>
+                        <button class="btn btn-icon" style="width: 28px; height: 28px; font-size: 0.8rem; background: var(--danger-color);" onclick="deleteStore(${store.id})"><i class='bx bx-trash'></i></button>
+                    </div>
+                </div>
+                ${store.location ? `<div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; line-height: 1.4;">${locationHtml}</div>` : ''}
+                ${store.note ? `<div style="font-size: 0.85rem; padding: 0.5rem; background: rgba(0,0,0,0.2); border-left: 3px solid var(--warning-color); border-radius: 4px;">${store.note}</div>` : ''}
+            </div>
+        `;
+    });
+}
+
+let activeEditStoreId = null;
+
+function openAddStoreModal() {
+    activeEditStoreId = null;
+    document.getElementById('store-name').value = '';
+    document.getElementById('store-location').value = '';
+    document.getElementById('store-phone').value = '';
+    document.getElementById('store-note').value = '';
+
+    document.getElementById('store-modal-title').textContent = 'เพิ่มรายชื่อร้านค้า';
+    document.getElementById('save-store-btn').textContent = 'บันทึกข้อมูลร้าน';
+
+    openModal('add-store-modal');
+}
+
+function editStore(id) {
+    activeEditStoreId = id;
+    const store = currentState.stores.find(s => s.id === id);
+    if (!store) return;
+
+    document.getElementById('store-name').value = store.name || '';
+    document.getElementById('store-location').value = store.location || '';
+    document.getElementById('store-phone').value = store.phone || '';
+    document.getElementById('store-note').value = store.note || '';
+
+    document.getElementById('store-modal-title').textContent = 'แก้ไขข้อมูลร้านค้า';
+    document.getElementById('save-store-btn').textContent = 'บันทึกการแก้ไข';
+
+    openModal('add-store-modal');
+}
+
+function deleteStore(id) {
+    if (confirm("คุณต้องการลบข้อมูลร้านค้านี้ใช่ไหม?")) {
+        currentState.stores = currentState.stores.filter(s => s.id !== id);
+        saveStateToStorage();
+        renderStores();
+    }
+}
+
+function saveStore() {
+    const name = document.getElementById('store-name').value;
+    const location = document.getElementById('store-location').value;
+    const phone = document.getElementById('store-phone').value;
+    const note = document.getElementById('store-note').value;
+
+    if (!name) return alert("กรุณาใส่ชื่อร้านค้า");
+
+    if (!currentState.stores) currentState.stores = [];
+
+    if (activeEditStoreId) {
+        const store = currentState.stores.find(s => s.id === activeEditStoreId);
+        if (store) {
+            store.name = name;
+            store.location = location;
+            store.phone = phone;
+            store.note = note;
+        }
+    } else {
+        currentState.stores.push({
+            id: Date.now(),
+            name,
+            location,
+            phone,
+            note
+        });
+    }
+
+    saveStateToStorage();
+    renderStores();
+
+    // Refresh datalist if implemented later
+    const datalist = document.getElementById('store-locations-list');
+    if (datalist) updateStoreDatalist();
+
+    closeModal('add-store-modal');
 }
 
 // --- DATA MANAGEMENT (BACKUP & EXPORT) ---
