@@ -346,24 +346,23 @@ function renderWorkflow() {
             });
             subTasksHtml += `</div>`;
         }
-
-        list.innerHTML += `
-            <div class="timeline-item ${item.status}">
-                <div class="timeline-dot"></div>
-                <div class="timeline-content">
-                    <div class="flex-between">
-                        <h4 style="flex:1;">${item.step}</h4>
-                        <div style="display:flex; gap:0.5rem; align-items:center;">
-                            ${badge}
-                            <button class="btn btn-icon" style="width:25px; height:25px; font-size:0.9rem; background: var(--warning-color);" onclick="editWorkflow(${item.id})"><i class='bx bx-edit'></i></button>
-                            <button class="btn btn-icon" style="width:25px; height:25px; font-size:0.9rem; background: var(--danger-color);" onclick="deleteWorkflow(${item.id})"><i class='bx bx-trash'></i></button>
-                        </div>
+        <div class="timeline-item ${item.status}">
+            <div class="timeline-dot"></div>
+            <div class="timeline-content">
+                <div class="flex-between">
+                    <h4 style="flex:1;">${item.step}</h4>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        ${badge}
+                        <button class="btn btn-icon" style="width:25px; height:25px; font-size:0.9rem; background: var(--info-color);" onclick="duplicateWorkflow(${item.id})"><i class='bx bx-copy'></i></button>
+                        <button class="btn btn-icon" style="width:25px; height:25px; font-size:0.9rem; background: var(--warning-color);" onclick="editWorkflow(${item.id})"><i class='bx bx-edit'></i></button>
+                        <button class="btn btn-icon" style="width:25px; height:25px; font-size:0.9rem; background: var(--danger-color);" onclick="deleteWorkflow(${item.id})"><i class='bx bx-trash'></i></button>
                     </div>
-                    <p class="subtitle mt-3"><i class='bx bx-calendar'></i> ${item.date}</p>
-                    ${subTasksHtml}
-                    ${imgTag}
                 </div>
+                <p class="subtitle mt-3"><i class='bx bx-calendar'></i> ${item.date}</p>
+                ${subTasksHtml}
+                ${imgTag}
             </div>
+        </div>
         `;
     });
 }
@@ -390,10 +389,10 @@ function editWorkflow(id) {
     if (item.image) {
         const preview = document.getElementById('wf-preview-container');
         preview.innerHTML = `
-            <img src="${item.image}" style="width: 100%; max-height: 250px; object-fit: contain; border-radius: 8px; border: 1px solid var(--glass-border);">
-            <button onclick="clearDualImagePreview('wf-camera', 'wf-gallery', 'wf-preview-container', 'wf-image-status')" style="position: absolute; top: 10px; right: 10px; background: var(--danger-color); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">
-                <i class='bx bx-trash'></i>
-            </button>
+            < img src = "${item.image}" style = "width: 100%; max-height: 250px; object-fit: contain; border-radius: 8px; border: 1px solid var(--glass-border);" >
+                <button onclick="clearDualImagePreview('wf-camera', 'wf-gallery', 'wf-preview-container', 'wf-image-status')" style="position: absolute; top: 10px; right: 10px; background: var(--danger-color); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">
+                    <i class='bx bx-trash'></i>
+                </button>
         `;
         preview.style.display = 'block';
     }
@@ -430,7 +429,7 @@ function renderEstimation() {
 
     fenceEstimateData.forEach((item, index) => {
         list.innerHTML += `
-            <tr style="border-bottom: 1px solid var(--glass-border);">
+            < tr style = "border-bottom: 1px solid var(--glass-border);" >
                 <td style="padding: 1rem; font-size: 0.9rem;">
                     <div style="font-weight: 500;">${item.name}</div>
                     <div style="font-size: 0.75rem; color: var(--text-secondary);">${item.unit}</div>
@@ -444,8 +443,8 @@ function renderEstimation() {
                     <button class="btn btn-icon" style="width: 32px; height: 32px; font-size: 1rem; background: var(--success-color);" 
                         onclick="addFromEstimate(${index})"><i class='bx bx-plus'></i></button>
                 </td>
-            </tr>
-        `;
+            </tr >
+            `;
     });
 }
 
@@ -453,13 +452,13 @@ function addFromEstimate(index) {
     const item = fenceEstimateData[index];
     currentState.materials.push({
         id: Date.now(),
-        name: `${item.name} (ประมาณการ)`,
+        name: `${ item.name } (ประมาณการ)`,
         price: item.avgPrice,
         location: "ประมาณการเบื้องต้น",
         image: null
     });
     saveStateToStorage();
-    alert(`เพิ่ม "${item.name}" ลงในรายการจัดซื้อ (ราคากลาง) เรียบร้อยแล้ว`);
+    alert(`เพิ่ม "${item.name}" ลงในรายการจัดซื้อ(ราคากลาง) เรียบร้อยแล้ว`);
 }
 
 function applyTemplate() {
@@ -589,11 +588,11 @@ function renderTempSubTasks() {
     list.innerHTML = '';
     tempSubTasks.forEach((st, index) => {
         list.innerHTML += `
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: rgba(0,0,0,0.2); border-radius: 8px; margin-bottom: 0.4rem;">
+            < div style = "display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: rgba(0,0,0,0.2); border-radius: 8px; margin-bottom: 0.4rem;" >
                 <span style="font-size: 0.9rem;">${st.text}</span>
                 <button class="btn btn-icon" style="width: 25px; height: 25px; background: var(--danger-color);" onclick="removeSubTask(${index})"><i class='bx bx-trash'></i></button>
-            </div>
-        `;
+            </div >
+            `;
     });
 }
 
@@ -615,10 +614,10 @@ function handleImagePreview(event, previewId) {
     reader.onload = function (e) {
         const container = document.getElementById(previewId);
         container.innerHTML = `
-            <img src="${e.target.result}" style="width: 100%; max-height: 250px; object-fit: contain; border-radius: 8px; border: 1px solid var(--glass-border); margin-top: 10px;">
-            <button onclick="clearImagePreview('${event.target.id}', '${previewId}')" style="position: absolute; top: 10px; right: 10px; background: var(--danger-color); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">
-                <i class='bx bx-trash'></i>
-            </button>
+            < img src = "${e.target.result}" style = "width: 100%; max-height: 250px; object-fit: contain; border-radius: 8px; border: 1px solid var(--glass-border); margin-top: 10px;" >
+                <button onclick="clearImagePreview('${event.target.id}', '${previewId}')" style="position: absolute; top: 10px; right: 10px; background: var(--danger-color); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">
+                    <i class='bx bx-trash'></i>
+                </button>
         `;
         container.style.display = 'block';
     };
@@ -671,7 +670,7 @@ function formatTime(totalSeconds) {
     const h = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
     const m = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
     const s = (totalSeconds % 60).toString().padStart(2, '0');
-    return `${h}:${m}:${s}`;
+    return `${ h }:${ m }:${ s } `;
 }
 
 function updateTimerDisplay() {
@@ -733,7 +732,7 @@ function logTimeSpan(actionStart, actionEnd, seconds) {
         id: Date.now(),
         date: date,
         duration: timeSpent,
-        desc: `บันทึกกิจกรรม (${actionStart} - ${actionEnd})`
+        desc: `บันทึกกิจกรรม(${ actionStart } - ${ actionEnd })`
     });
     saveStateToStorage();
     renderTimeLogs();
@@ -744,13 +743,13 @@ function renderTimeLogs() {
     list.innerHTML = '';
 
     if (currentState.timeLogs.length === 0) {
-        list.innerHTML = `<p class="subtitle" style="text-align:center;">ยังไม่มีบันทึกการทำงาน</p>`;
+        list.innerHTML = `< p class="subtitle" style = "text-align:center;" > ยังไม่มีบันทึกการทำงาน</p > `;
         return;
     }
 
     currentState.timeLogs.forEach(log => {
         list.innerHTML += `
-            <div class="flex-item-list">
+            < div class="flex-item-list" >
                 <div class="item-details" style="flex: 1;">
                     <h4>${log.desc}</h4>
                     <div class="item-meta">
@@ -762,8 +761,8 @@ function renderTimeLogs() {
                     <button class="btn btn-icon" style="width:30px; height:30px; font-size:1rem; background: var(--warning-color);" onclick="editTimeLog(${log.id})"><i class='bx bx-edit'></i></button>
                     <button class="btn btn-icon" style="width:30px; height:30px; font-size:1rem; background: var(--danger-color);" onclick="deleteTimeLog(${log.id})"><i class='bx bx-trash'></i></button>
                 </div>
-            </div>
-        `;
+            </div >
+            `;
     });
 }
 
@@ -813,7 +812,7 @@ function renderWorkers() {
     list.innerHTML = '';
 
     if (currentState.workers.length === 0) {
-        list.innerHTML = `<p style="text-align:center; color: var(--text-secondary); margin-top:2rem;">ยังไม่มีรายชื่อพนักงาน</p>`;
+        list.innerHTML = `< p style = "text-align:center; color: var(--text-secondary); margin-top:2rem;" > ยังไม่มีรายชื่อพนักงาน</p > `;
         return;
     }
 
@@ -821,7 +820,7 @@ function renderWorkers() {
         let netPayable = worker.accumulatedWage - worker.advancePayment;
 
         list.innerHTML += `
-            <div class="flex-item-list" style="flex-direction: column; align-items: stretch; gap: 0.75rem;">
+            < div class="flex-item-list" style = "flex-direction: column; align-items: stretch; gap: 0.75rem;" >
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div style="display: flex; align-items: center; gap: 1rem;">
                         <div class="stat-icon" style="width: 40px; height: 40px; font-size: 1.25rem; margin: 0; background: rgba(59, 130, 246, 0.1); color: var(--primary-color);">
@@ -847,19 +846,19 @@ function renderWorkers() {
                     </div>
                 </div>
 
-                <!-- Wage Financials -->
-                <div style="background: rgba(0,0,0,0.2); padding: 0.75rem; border-radius: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.85rem;">
-                    <div>ยอดสะสม: <strong style="color: var(--success-color);">฿${worker.accumulatedWage}</strong></div>
-                    <div>เบิกล่วงหน้า: <strong style="color: var(--danger-color);">฿${worker.advancePayment}</strong></div>
-                    <div style="grid-column: span 2; display: flex; justify-content: space-between; align-items: center; margin-top: 0.25rem; padding-top: 0.5rem; border-top: 1px dashed rgba(255,255,255,0.1);">
-                        <span>คงเหลือสุทธิ: <strong style="font-size: 1.1rem; color: var(--text-primary);">฿${netPayable}</strong></span>
-                        <button class="btn btn-icon" style="width:30px; height:30px; font-size: 1rem; background: var(--warning-color);" onclick="openAdvanceModal(${worker.id}, '${worker.name}')">
-                            <i class='bx bx-edit-alt'></i>
-                        </button>
-                    </div>
+                <!--Wage Financials-- >
+            <div style="background: rgba(0,0,0,0.2); padding: 0.75rem; border-radius: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.85rem;">
+                <div>ยอดสะสม: <strong style="color: var(--success-color);">฿${worker.accumulatedWage}</strong></div>
+                <div>เบิกล่วงหน้า: <strong style="color: var(--danger-color);">฿${worker.advancePayment}</strong></div>
+                <div style="grid-column: span 2; display: flex; justify-content: space-between; align-items: center; margin-top: 0.25rem; padding-top: 0.5rem; border-top: 1px dashed rgba(255,255,255,0.1);">
+                    <span>คงเหลือสุทธิ: <strong style="font-size: 1.1rem; color: var(--text-primary);">฿${netPayable}</strong></span>
+                    <button class="btn btn-icon" style="width:30px; height:30px; font-size: 1rem; background: var(--warning-color);" onclick="openAdvanceModal(${worker.id}, '${worker.name}')">
+                        <i class='bx bx-edit-alt'></i>
+                    </button>
                 </div>
             </div>
-        `;
+            </div >
+            `;
     });
 }
 
@@ -989,7 +988,7 @@ function checkoutWorkersDay() {
     });
 
     saveStateToStorage();
-    alert(`บันทึกยอดรายวันสำเร็จ (${count} คน)\nระบบได้นำค่าแรงไปทบยอดสะสมและล้างสถานะเข้างานสำหรับวันพรุ่งนี้แล้ว`);
+    alert(`บันทึกยอดรายวันสำเร็จ(${ count } คน) \nระบบได้นำค่าแรงไปทบยอดสะสมและล้างสถานะเข้างานสำหรับวันพรุ่งนี้แล้ว`);
     renderWorkers();
 }
 
@@ -1010,31 +1009,31 @@ function calculateWages() {
     let totalWages = 0;
     let presentCount = 0;
 
-    let reportHtml = `<div style="text-align: left; font-size: 0.95rem;">`;
+    let reportHtml = `< div style = "text-align: left; font-size: 0.95rem;" > `;
 
     currentState.workers.forEach(w => {
         if (w.isPresent) {
             totalWages += w.wage;
             presentCount++;
             reportHtml += `
-            <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 0.25rem;">
+            < div style = "display:flex; justify-content:space-between; margin-bottom: 0.5rem; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 0.25rem;" >
                 <span><i class='bx bx-check' style="color:var(--success-color);"></i> ${w.name} (${w.role})</span>
                 <span style="color:var(--primary-color);">฿${w.wage}</span>
-            </div>`;
+            </div > `;
         }
     });
 
     reportHtml += `
-        <div style="display:flex; justify-content:space-between; margin-top: 1rem; font-weight: bold; font-size: 1.1rem;">
+            < div style = "display:flex; justify-content:space-between; margin-top: 1rem; font-weight: bold; font-size: 1.1rem;" >
             <span>รวมค่าแรงวันนี้ (${presentCount} คน):</span>
             <span style="color:var(--danger-color);">฿${totalWages.toLocaleString()}</span>
-        </div>
-        <div style="margin-top: 1.5rem;">
-            <button class="btn btn-success w-100" onclick="checkoutWorkersDay(); closeModal('wage-report-modal');">
-                <i class='bx bx-check-double'></i> ยืนยันจบวัน (ทบยอดสะสม)
-            </button>
-        </div>
-    </div>`;
+        </div >
+            <div style="margin-top: 1.5rem;">
+                <button class="btn btn-success w-100" onclick="checkoutWorkersDay(); closeModal('wage-report-modal');">
+                    <i class='bx bx-check-double'></i> ยืนยันจบวัน (ทบยอดสะสม)
+                </button>
+            </div>
+    </div > `;
 
     document.getElementById('wage-report-content').innerHTML = presentCount > 0 ? reportHtml : "<p>ไม่มีพนักงานเข้างานวันนี้</p>";
     openModal('wage-report-modal');
@@ -1046,7 +1045,7 @@ function printGroupReport() {
     const dateStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
 
     let html = `
-        <h2 class="text-center" style="margin-bottom: 5px;">รายงานสรุปค่าแรงทีมงาน</h2>
+            < h2 class="text-center" style = "margin-bottom: 5px;" > รายงานสรุปค่าแรงทีมงาน</h2 >
         <p class="text-center" style="margin-bottom: 20px;">วันที่พิมพ์: ${dateStr}</p>
         <table class="print-table">
             <thead>
@@ -1103,7 +1102,7 @@ function printGroupReport() {
                 <p style="margin-top: 10px;">(..........................................................)</p>
             </div>
         </div>
-    `;
+        `;
 
     printArea.innerHTML = html;
     window.print();
@@ -1122,7 +1121,7 @@ function printIndividualReport() {
     const dateStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
 
     let html = `
-        <div style="max-width: 600px; margin: 0 auto; border: 1px solid #ccc; padding: 20px;">
+            < div style = "max-width: 600px; margin: 0 auto; border: 1px solid #ccc; padding: 20px;" >
             <h2 class="text-center" style="margin-bottom: 5px;">ใบรับเงิน / แจ้งยอดค่าแรง</h2>
             <p class="text-center" style="margin-bottom: 20px;">วันที่พิมพ์: ${dateStr}</p>
             
@@ -1165,8 +1164,8 @@ function printIndividualReport() {
                     <p style="margin-top: 10px;">(${worker.name})</p>
                 </div>
             </div>
-        </div>
-    `;
+        </div >
+            `;
 
     printArea.innerHTML = html;
     window.print();
@@ -1204,10 +1203,10 @@ function calculateCompare() {
         let diffValue = 0;
 
         let html = `
-            <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem; padding-bottom: 0.5rem; border-bottom: 1px dashed rgba(255,255,255,0.2);">
+            < div style = "display:flex; justify-content:space-between; margin-bottom:0.5rem; padding-bottom: 0.5rem; border-bottom: 1px dashed rgba(255,255,255,0.2);" >
                 <span>${nameA}</span>
                 <strong style="color:var(--primary-color);">฿${costPerUnitA.toFixed(2)} / ${unitA}</strong>
-            </div>
+            </div >
             <div style="display:flex; justify-content:space-between; margin-bottom:1rem; padding-bottom: 0.5rem; border-bottom: 1px dashed rgba(255,255,255,0.2);">
                 <span>${nameB}</span>
                 <strong style="color:var(--success-color);">฿${costPerUnitB.toFixed(2)} / ${unitB}</strong>
@@ -1217,17 +1216,17 @@ function calculateCompare() {
         if (costPerUnitA < costPerUnitB) {
             diffValue = costPerUnitB - costPerUnitA;
             diffPercent = (diffValue / costPerUnitB) * 100;
-            html += `<div style="font-weight:bold; color:var(--success-color);"><i class='bx bx-check-circle'></i> ${nameA} ประหยัดกว่า ${diffPercent.toFixed(1)}%</div>`;
+            html += `< div style = "font-weight:bold; color:var(--success-color);" > <i class='bx bx-check-circle'></i> ${ nameA } ประหยัดกว่า ${ diffPercent.toFixed(1) }%</div > `;
             bestStore = nameA;
             bestPrice = priceA;
         } else if (costPerUnitB < costPerUnitA) {
             diffValue = costPerUnitA - costPerUnitB;
             diffPercent = (diffValue / costPerUnitA) * 100;
-            html += `<div style="font-weight:bold; color:var(--success-color);"><i class='bx bx-check-circle'></i> ${nameB} ประหยัดกว่า ${diffPercent.toFixed(1)}%</div>`;
+            html += `< div style = "font-weight:bold; color:var(--success-color);" > <i class='bx bx-check-circle'></i> ${ nameB } ประหยัดกว่า ${ diffPercent.toFixed(1) }%</div > `;
             bestStore = nameB;
             bestPrice = priceB;
         } else {
-            html += `<div style="font-weight:bold; color:var(--text-primary);"><i class='bx bx-minus-circle'></i> ทั้งสองร้านราคาต่อหน่วยเท่ากัน</div>`;
+            html += `< div style = "font-weight:bold; color:var(--text-primary);" > <i class='bx bx-minus-circle'></i> ทั้งสองร้านราคาต่อหน่วยเท่ากัน</div > `;
             bestStore = nameA;
             bestPrice = priceA;
         }
@@ -1236,7 +1235,7 @@ function calculateCompare() {
             storeName: bestStore,
             price: bestPrice,
             productName: document.getElementById('compare-name').value || 'สินค้าจากการเปรียบเทียบ',
-            location: `${nameA} vs ${nameB}`
+            location: `${ nameA } vs ${ nameB } `
         };
 
         detailsDiv.innerHTML = html;
@@ -1259,7 +1258,7 @@ function saveToMaterialsFromCompare() {
     });
 
     saveStateToStorage();
-    alert(`บันทึก ${currentState.compareResult.productName} จากร้าน ${currentState.compareResult.storeName} ในราคา ฿${currentState.compareResult.price} ลงรายการจัดซื้อเรียบร้อยแล้ว`);
+    alert(`บันทึก ${ currentState.compareResult.productName } จากร้าน ${ currentState.compareResult.storeName } ในราคา ฿${ currentState.compareResult.price } ลงรายการจัดซื้อเรียบร้อยแล้ว`);
 
     // Reset and hide compare view
     document.getElementById('store-a-price').value = '';
@@ -1283,7 +1282,7 @@ function updateStoreDatalist() {
     // Using Set to avoid duplicates if needed, but stores should be unique
     stores.forEach(store => {
         if (store.name) {
-            datalist.innerHTML += `<option value="${store.name}"></option>`;
+            datalist.innerHTML += `< option value = "${store.name}" ></option > `;
         }
     });
 }
@@ -1302,25 +1301,25 @@ function renderStores() {
     });
 
     if (filteredStores.length === 0) {
-        list.innerHTML = `<p style="text-align: center; color: var(--text-secondary); margin-top: 1rem;">ไม่พบรายชื่อร้านค้า</p>`;
+        list.innerHTML = `< p style = "text-align: center; color: var(--text-secondary); margin-top: 1rem;" > ไม่พบรายชื่อร้านค้า</p > `;
         return;
     }
 
     filteredStores.forEach(store => {
         let locationHtml = store.location;
         if (store.location && (store.location.startsWith('http://') || store.location.startsWith('https://'))) {
-            locationHtml = `<a href="${store.location}" target="_blank" style="color: var(--primary-color); text-decoration: underline;"><i class='bx bx-map-alt'></i> ดูแผนที่</a>`;
+            locationHtml = `< a href = "${store.location}" target = "_blank" style = "color: var(--primary-color); text-decoration: underline;" > <i class='bx bx-map-alt'></i> ดูแผนที่</a > `;
         } else if (store.location) {
-            locationHtml = `<i class='bx bx-map'></i> ${store.location}`;
+            locationHtml = `< i class='bx bx-map' ></i > ${ store.location } `;
         }
 
         let phoneHtml = '';
         if (store.phone) {
-            phoneHtml = `<a href="tel:${store.phone}" class="btn btn-success" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;"><i class='bx bxs-phone-call'></i> โทร</a>`;
+            phoneHtml = `< a href = "tel:${store.phone}" class="btn btn-success" style = "padding: 0.25rem 0.5rem; font-size: 0.75rem;" > <i class='bx bxs-phone-call'></i> โทร</a > `;
         }
 
         list.innerHTML += `
-            <div class="card" style="margin-bottom: 0.75rem; padding: 1rem;">
+            < div class="card" style = "margin-bottom: 0.75rem; padding: 1rem;" >
                 <div class="flex-between" style="align-items: flex-start; margin-bottom: 0.5rem;">
                     <div>
                         <h3 style="color: var(--primary-color); font-size: 1.1rem; display: flex; align-items: center; gap: 0.25rem;"><i class='bx bx-store'></i> ${store.name}</h3>
@@ -1332,10 +1331,10 @@ function renderStores() {
                         <button class="btn btn-icon" style="width: 28px; height: 28px; font-size: 0.8rem; background: var(--danger-color);" onclick="deleteStore(${store.id})"><i class='bx bx-trash'></i></button>
                     </div>
                 </div>
-                ${store.location ? `<div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; line-height: 1.4;">${locationHtml}</div>` : ''}
-                ${store.note ? `<div style="font-size: 0.85rem; padding: 0.5rem; background: rgba(0,0,0,0.2); border-left: 3px solid var(--warning-color); border-radius: 4px;">${store.note}</div>` : ''}
-            </div>
-        `;
+                ${ store.location ? `<div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; line-height: 1.4;">${locationHtml}</div>` : '' }
+                ${ store.note ? `<div style="font-size: 0.85rem; padding: 0.5rem; background: rgba(0,0,0,0.2); border-left: 3px solid var(--warning-color); border-radius: 4px;">${store.note}</div>` : '' }
+            </div >
+            `;
     });
 }
 
@@ -1458,7 +1457,7 @@ function exportMaterialsCSV() {
     let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // Add BOM
     csvContent += "ชื่อวัสดุ/อุปกรณ์,ราคา (บาท),ร้านค้า\n";
     currentState.materials.forEach(m => {
-        csvContent += `"${m.name}","${m.price}","${m.location}"\n`;
+        csvContent += `"${m.name}", "${m.price}", "${m.location}"\n`;
     });
 
     const encodedUri = encodeURI(csvContent);
@@ -1475,7 +1474,7 @@ function exportWorkersCSV() {
     let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
     csvContent += "ชื่อพนักงาน,ตำแหน่ง,ค่าแรงต่อวัน,ยอดสะสม,เบิกล่วงหน้า\n";
     currentState.workers.forEach(w => {
-        csvContent += `"${w.name}","${w.role}","${w.wage}","${w.accumulatedWage}","${w.advancePayment}"\n`;
+        csvContent += `"${w.name}", "${w.role}", "${w.wage}", "${w.accumulatedWage}", "${w.advancePayment}"\n`;
     });
 
     const encodedUri = encodeURI(csvContent);
@@ -1534,11 +1533,11 @@ function handleDualImage(inputElement, otherInputId, previewId, statusId) {
         const reader = new FileReader();
         reader.onload = function (e) {
             previewContainer.innerHTML = `
-                <img src="${e.target.result}" style="width: 100%; max-height: 250px; object-fit: contain; border-radius: 8px; border: 1px solid var(--glass-border); margin-top: 10px;">
+            < img src = "${e.target.result}" style = "width: 100%; max-height: 250px; object-fit: contain; border-radius: 8px; border: 1px solid var(--glass-border); margin-top: 10px;" >
                 <button type="button" onclick="clearDualImagePreview('${inputElement.id}', '${otherInputId}', '${previewId}', '${statusId}')" style="position: absolute; top: 10px; right: 10px; background: var(--danger-color); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">
                     <i class='bx bx-trash'></i>
                 </button>
-            `;
+        `;
             previewContainer.style.display = 'block';
             if (statusContainer) statusContainer.style.display = 'block';
         };
