@@ -234,7 +234,7 @@ function editMaterial(id) {
 function deleteMaterial(id) {
     if (confirm("คุณต้องการลบรายการนี้ใช่ไหม?")) {
         currentState.materials = currentState.materials.filter(m => m.id !== id);
-        saveStateToStorage();
+        saveData();
         renderMaterials();
         showToast('ลบรายการวัสดุสำเร็จ', 'info');
     }
@@ -290,7 +290,7 @@ async function addMaterial() {
         });
     }
 
-    saveStateToStorage();
+    saveData();
     renderMaterials();
     closeModal('add-material-modal');
     showToast('บันทึกรายการวัสดุสำเร็จ', 'success');
@@ -395,7 +395,7 @@ function editWorkflow(id) {
 function deleteWorkflow(id) {
     if (confirm("คุณต้องการขั้นตอนงานนี้ใช่ไหม?")) {
         currentState.workflow = currentState.workflow.filter(w => w.id !== id);
-        saveStateToStorage();
+        saveData();
         renderWorkflow();
         showToast('ลบขั้นตอนงานสำเร็จ', 'info');
     }
@@ -413,7 +413,7 @@ function duplicateWorkflow(id) {
     };
 
     currentState.workflow.push(newItem);
-    saveStateToStorage();
+    saveData();
     renderWorkflow();
     showToast('คัดลอกขั้นตอนงานสำเร็จ', 'success');
 }
@@ -466,7 +466,7 @@ function addFromEstimate(index) {
         location: "ประมาณการเบื้องต้น",
         image: null
     });
-    saveStateToStorage();
+    saveData();
     alert(`เพิ่ม "${item.name}" ลงในรายการจัดซื้อ(ราคากลาง) เรียบร้อยแล้ว`);
 }
 
@@ -498,7 +498,7 @@ function applyTemplate() {
             });
         });
 
-        saveStateToStorage();
+        saveData();
         renderWorkflow();
         closeModal('brainstorm-modal');
         alert('เพิ่มขั้นตอนงานและรายการตรวจสอบสำเร็จ!');
@@ -567,7 +567,7 @@ async function saveWorkflow() {
         });
     }
 
-    saveStateToStorage();
+    saveData();
     renderWorkflow();
     closeModal('add-workflow-modal');
     showToast('บันทึกขั้นตอนงานสำเร็จ', 'success');
@@ -609,7 +609,7 @@ function toggleSubTask(workflowId, subTaskIndex) {
     const item = currentState.workflow.find(w => w.id === workflowId);
     if (item && item.subTasks && item.subTasks[subTaskIndex]) {
         item.subTasks[subTaskIndex].completed = !item.subTasks[subTaskIndex].completed;
-        saveStateToStorage();
+        saveData();
         renderWorkflow();
     }
 }
@@ -714,7 +714,7 @@ function toggleTimer() {
         document.getElementById('timer-status').textContent = 'กำลังทำงาน...';
         document.getElementById('timer-status').style.color = 'var(--success-color)';
     }
-    saveStateToStorage();
+    saveData();
 }
 
 function resetTimer() {
@@ -730,7 +730,7 @@ function resetTimer() {
     document.getElementById('timer-btn').className = "btn btn-primary w-100";
     document.getElementById('timer-status').textContent = 'ยังไม่เริ่ม';
     document.getElementById('timer-status').style.color = 'var(--text-secondary)';
-    saveStateToStorage();
+    saveData();
 }
 
 function logTimeSpan(actionStart, actionEnd, seconds) {
@@ -799,7 +799,7 @@ function saveTimeLogEdit() {
     log.duration = document.getElementById('edit-timelog-duration').value || "00:00:00";
     log.date = document.getElementById('edit-timelog-date').value || new Date().toLocaleDateString('th-TH');
 
-    saveStateToStorage();
+    saveData();
     renderTimeLogs();
     closeModal('edit-timelog-modal');
     showToast('บันทึกบันทึกเวลาสำเร็จ', 'success');
@@ -808,7 +808,7 @@ function saveTimeLogEdit() {
 function deleteTimeLog(id) {
     if (confirm("คุณต้องการลบบันทึกเวลานี้ใช่ไหม?")) {
         currentState.timeLogs = currentState.timeLogs.filter(l => l.id !== id);
-        saveStateToStorage();
+        saveData();
         renderTimeLogs();
         showToast('ลบบันทึกเวลาสำเร็จ', 'info');
     }
@@ -875,7 +875,7 @@ function togglePresence(id) {
     const worker = currentState.workers.find(w => w.id === id);
     if (worker) {
         worker.isPresent = !worker.isPresent;
-        saveStateToStorage();
+        saveData();
         renderWorkers(); // re-render to update UI if necessary, though CSS handles the switch visually
     }
 }
@@ -916,7 +916,7 @@ function editWorkerInfo(id) {
 function deleteWorker(id) {
     if (confirm("คุณต้องการลบพนักงานคนนี้ใช่ไหม?\\nข้อมูลจะถูกลบทิ้งอย่างถาวร")) {
         currentState.workers = currentState.workers.filter(w => w.id !== id);
-        saveStateToStorage();
+        saveData();
         renderWorkers();
         showToast('ลบพนักงานสำเร็จ', 'info');
     }
@@ -950,7 +950,7 @@ function saveWorker() {
         });
     }
 
-    saveStateToStorage();
+    saveData();
     renderWorkers();
     closeModal('add-worker-modal');
     showToast('บันทึกข้อมูลพนักงานสำเร็จ', 'success');
@@ -979,7 +979,7 @@ function saveWorkerFinancials() {
     worker.accumulatedWage = parseFloat(document.getElementById('edit-accumulated').value) || 0;
     worker.advancePayment = parseFloat(document.getElementById('edit-advance').value) || 0;
 
-    saveStateToStorage();
+    saveData();
     renderWorkers();
     closeModal('edit-wage-modal');
     showToast('บันทึกข้อมูลการเงินพนักงานสำเร็จ', 'success');
@@ -996,7 +996,7 @@ function checkoutWorkersDay() {
         }
     });
 
-    saveStateToStorage();
+    saveData();
     alert(`บันทึกยอดรายวันสำเร็จ(${count} คน) \nระบบได้นำค่าแรงไปทบยอดสะสมและล้างสถานะเข้างานสำหรับวันพรุ่งนี้แล้ว`);
     renderWorkers();
 }
@@ -1007,7 +1007,7 @@ function clearWageCycle() {
             w.accumulatedWage = 0;
             w.advancePayment = 0;
         });
-        saveStateToStorage();
+        saveData();
         renderWorkers();
         alert('ล้างรอบบิลค่าแรงเรียบร้อยแล้ว');
         showToast('ล้างรอบบิลค่าแรงสำเร็จ', 'info');
@@ -1253,7 +1253,7 @@ function calculateCompare() {
         resultDiv.style.display = 'none';
         currentState.compareResult = null;
     }
-    saveStateToStorage();
+    saveData();
 }
 
 function saveToMaterialsFromCompare() {
@@ -1266,7 +1266,7 @@ function saveToMaterialsFromCompare() {
         location: currentState.compareResult.storeName
     });
 
-    saveStateToStorage();
+    saveData();
     alert(`บันทึก ${currentState.compareResult.productName} จากร้าน ${currentState.compareResult.storeName} ในราคา ฿${currentState.compareResult.price} ลงรายการจัดซื้อเรียบร้อยแล้ว`);
 
     // Reset and hide compare view
@@ -1381,7 +1381,7 @@ function editStore(id) {
 function deleteStore(id) {
     if (confirm("คุณต้องการลบข้อมูลร้านค้านี้ใช่ไหม?")) {
         currentState.stores = currentState.stores.filter(s => s.id !== id);
-        saveStateToStorage();
+        saveData();
         renderStores();
         updateStoreDatalist();
         showToast('ลบร้านค้าสำเร็จ', 'info');
@@ -1416,7 +1416,7 @@ function saveStore() {
         });
     }
 
-    saveStateToStorage();
+    saveData();
     renderStores();
 
     // Refresh datalist if implemented later
@@ -1450,7 +1450,7 @@ function importDataJSON(event) {
             const importedData = JSON.parse(e.target.result);
             if (importedData && typeof importedData === 'object') {
                 currentState = { ...currentState, ...importedData };
-                saveStateToStorage();
+                saveData();
                 alert("กู้คืนข้อมูลสำเร็จ! ระบบจะทำการรีเฟรชหน้าเว็บ");
                 location.reload();
             }
