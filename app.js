@@ -1710,6 +1710,17 @@ function handleDualImage(inputElement, otherInputId, previewId, statusId) {
             statusContainer.style.display = 'block';
         }
 
+        // Auto-complete logic for workflows: If a photo is attached, assume the step is done.
+        if (inputElement.id.startsWith('wf-')) {
+            const statusSelect = document.getElementById('wf-status');
+            if (statusSelect) {
+                statusSelect.value = 'completed';
+                // Highlight the change
+                statusSelect.style.border = '2px solid var(--success-color)';
+                setTimeout(() => { statusSelect.style.border = '1px solid var(--glass-border)'; }, 2000);
+            }
+        }
+
         // Ensure buttons are visible - scroll into view if needed
         setTimeout(() => {
             previewContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
