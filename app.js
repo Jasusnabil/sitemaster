@@ -220,14 +220,16 @@ function editMaterial(id) {
     document.getElementById('mat-name').value = mat.name;
     document.getElementById('mat-price').value = mat.price;
     document.getElementById('mat-location').value = mat.location;
-    document.getElementById('mat-image').value = ''; // Reset file input
+    document.getElementById('mat-camera').value = ''; // Reset file inputs
+    document.getElementById('mat-gallery').value = '';
+    document.getElementById('mat-image-status').style.display = 'none';
 
     // Load image preview if exists
     if (mat.image) {
         const preview = document.getElementById('mat-preview-container');
         preview.innerHTML = `
             <img src="${mat.image}" style="width: 100%; max-height: 250px; object-fit: contain; border-radius: 8px; border: 1px solid var(--glass-border); margin-top: 10px;">
-            <button onclick="clearImagePreview('mat-image', 'mat-preview-container')" style="position: absolute; top: 20px; right: 10px; background: var(--danger-color); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">
+            <button onclick="clearDualImagePreview('mat-camera', 'mat-gallery', 'mat-preview-container', 'mat-image-status')" style="position: absolute; top: 20px; right: 10px; background: var(--danger-color); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">
                 <i class='bx bx-trash'></i>
             </button>
         `;
@@ -376,7 +378,9 @@ function editWorkflow(id) {
     document.getElementById('wf-step').value = item.step;
     document.getElementById('wf-date').value = item.date;
     document.getElementById('wf-status').value = item.status;
-    document.getElementById('wf-image').value = '';
+    document.getElementById('wf-camera').value = '';
+    document.getElementById('wf-gallery').value = '';
+    document.getElementById('wf-image-status').style.display = 'none';
 
     // Load subtasks
     tempSubTasks = item.subTasks ? [...item.subTasks] : [];
@@ -387,7 +391,7 @@ function editWorkflow(id) {
         const preview = document.getElementById('wf-preview-container');
         preview.innerHTML = `
             <img src="${item.image}" style="width: 100%; max-height: 250px; object-fit: contain; border-radius: 8px; border: 1px solid var(--glass-border);">
-            <button onclick="clearImagePreview('wf-image', 'wf-preview-container')" style="position: absolute; top: 10px; right: 10px; background: var(--danger-color); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">
+            <button onclick="clearDualImagePreview('wf-camera', 'wf-gallery', 'wf-preview-container', 'wf-image-status')" style="position: absolute; top: 10px; right: 10px; background: var(--danger-color); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">
                 <i class='bx bx-trash'></i>
             </button>
         `;
@@ -498,7 +502,9 @@ function openAddWorkflowModal() {
     document.getElementById('wf-step').value = '';
     document.getElementById('wf-date').value = '';
     document.getElementById('wf-status').value = 'pending';
-    document.getElementById('wf-image').value = '';
+    document.getElementById('wf-camera').value = '';
+    document.getElementById('wf-gallery').value = '';
+    document.getElementById('wf-image-status').style.display = 'none';
     tempSubTasks = [];
     renderTempSubTasks();
     openModal('add-workflow-modal');
