@@ -244,56 +244,64 @@ async function addMaterial() {
     const name = document.getElementById('mat-name').value;
     const price = document.getElementById('mat-price').value;
     const location = document.getElementById('mat-location').value;
-    const cameraInput = document.getElementById('mat-camera');
-    const galleryInput = document.getElementById('mat-gallery');
 
     if (!name) return alert("กรุณาใส่ชื่อรายการ");
 
-    let imageData = null;
-    let activeInput = cameraInput.files && cameraInput.files[0] ? cameraInput : (galleryInput.files && galleryInput.files[0] ? galleryInput : null);
+    const btn = document.getElementById('save-material-btn');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'กำลังบันทึก...';
 
-    if (activeInput && activeInput.files[0]) {
-        try {
+    try {
+        let imageData = null;
+        const cameraInput = document.getElementById('mat-camera');
+        const galleryInput = document.getElementById('mat-gallery');
+        const activeInput = (cameraInput.files && cameraInput.files[0]) ? cameraInput : ((galleryInput.files && galleryInput.files[0]) ? galleryInput : null);
+
+        if (activeInput && activeInput.files[0]) {
             imageData = await readAndCompressImage(activeInput.files[0]);
-        } catch (e) {
-            console.warn("Could not read image", e);
+        } else {
+            // Keep existing image if preview is still visible
+            const previewVisible = document.getElementById('mat-preview-container').style.display !== 'none';
+            if (activeMaterialId && previewVisible) {
+                const existing = currentState.materials.find(m => m.id === activeMaterialId);
+                if (existing) imageData = existing.image;
+            }
         }
-    } else {
-        // Keep existing image if preview is still visible
-        const previewVisible = document.getElementById('mat-preview-container').style.display !== 'none';
-        if (activeMaterialId && previewVisible) {
-            const existing = currentState.materials.find(m => m.id === activeMaterialId);
-            if (existing) imageData = existing.image;
-        }
-    }
 
-    if (activeMaterialId) {
-        // Edit existing
-        const mat = currentState.materials.find(m => m.id === activeMaterialId);
-        if (mat) {
-            mat.name = name;
-            mat.price = price ? parseFloat(price) : 0;
-            mat.location = location || "ไม่ระบุ";
-            mat.image = imageData;
-            // keep existing date
+        if (activeMaterialId) {
+            // Edit existing
+            const mat = currentState.materials.find(m => m.id === activeMaterialId);
+            if (mat) {
+                mat.name = name;
+                mat.price = price ? parseFloat(price) : 0;
+                mat.location = location || "ไม่ระบุ";
+                mat.image = imageData;
+            }
+            activeMaterialId = null;
+        } else {
+            // Add new
+            currentState.materials.push({
+                id: Date.now(),
+                name,
+                price: price ? parseFloat(price) : 0,
+                location: location || "ไม่ระบุ",
+                image: imageData,
+                date: new Date().toISOString()
+            });
         }
-        activeMaterialId = null;
-    } else {
-        // Add new
-        currentState.materials.push({
-            id: Date.now(),
-            name,
-            price: price ? parseFloat(price) : 0,
-            location: location || "ไม่ระบุ",
-            image: imageData,
-            date: new Date().toISOString() // Chronological ledger tracking
-        });
-    }
 
-    saveData();
-    renderMaterials();
-    closeModal('add-material-modal');
-    showToast('บันทึกรายการวัสดุสำเร็จ', 'success');
+        saveData();
+        renderMaterials();
+        closeModal('add-material-modal');
+        showToast('บันทึกรายการวัสดุสำเร็จ', 'success');
+    } catch (error) {
+        console.error("Save Material Error:", error);
+        showToast('เกิดข้อผิดพลาดในการบันทึก', 'danger');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+    }
 }
 
 // --- WORKFLOW FUNCTIONALITY ---
@@ -527,50 +535,59 @@ async function saveWorkflow() {
 
     if (!step) return alert("กรุณาใส่ชื่อกระบวนการ");
 
-    let imageData = null;
-    let activeInput = cameraInput.files && cameraInput.files[0] ? cameraInput : (galleryInput.files && galleryInput.files[0] ? galleryInput : null);
+    const btn = document.getElementById('save-workflow-btn');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'กำลังประมวลผลรูปภาพ...';
 
-    // Check if there's a new image selected
-    if (activeInput && activeInput.files[0]) {
-        try {
+    try {
+        let imageData = null;
+        let activeInput = cameraInput.files && cameraInput.files[0] ? cameraInput : (galleryInput.files && galleryInput.files[0] ? galleryInput : null);
+
+        // Check if there's a new image selected
+        if (activeInput && activeInput.files[0]) {
             imageData = await readAndCompressImage(activeInput.files[0]);
-        } catch (e) {
-            console.warn("Could not read image", e);
+        } else {
+            // Keep existing image if no new one is selected AND preview is still visible
+            const previewVisible = document.getElementById('wf-preview-container').style.display !== 'none';
+            if (activeWorkflowId && previewVisible) {
+                const existing = currentState.workflow.find(w => w.id === activeWorkflowId);
+                if (existing) imageData = existing.image;
+            }
         }
-    } else {
-        // Keep existing image if no new one is selected AND preview is still visible
-        const previewVisible = document.getElementById('wf-preview-container').style.display !== 'none';
-        if (activeWorkflowId && previewVisible) {
-            const existing = currentState.workflow.find(w => w.id === activeWorkflowId);
-            if (existing) imageData = existing.image;
-        }
-    }
 
-    if (activeWorkflowId) {
-        const item = currentState.workflow.find(w => w.id === activeWorkflowId);
-        if (item) {
-            item.step = step;
-            item.date = date;
-            item.status = status;
-            item.image = imageData;
-            item.subTasks = [...tempSubTasks];
+        if (activeWorkflowId) {
+            const item = currentState.workflow.find(w => w.id === activeWorkflowId);
+            if (item) {
+                item.step = step;
+                item.date = date;
+                item.status = status;
+                item.image = imageData;
+                item.subTasks = [...tempSubTasks];
+            }
+            activeWorkflowId = null;
+        } else {
+            currentState.workflow.push({
+                id: Date.now(),
+                step,
+                date,
+                status,
+                image: imageData,
+                subTasks: [...tempSubTasks]
+            });
         }
-        activeWorkflowId = null;
-    } else {
-        currentState.workflow.push({
-            id: Date.now(),
-            step,
-            date,
-            status,
-            image: imageData,
-            subTasks: [...tempSubTasks]
-        });
-    }
 
-    saveData();
-    renderWorkflow();
-    closeModal('add-workflow-modal');
-    showToast('บันทึกขั้นตอนงานสำเร็จ', 'success');
+        saveData();
+        renderWorkflow();
+        closeModal('add-workflow-modal');
+        showToast('บันทึกขั้นตอนงานสำเร็จ', 'success');
+    } catch (error) {
+        console.error("Save Workflow Error:", error);
+        showToast('เกิดข้อผิดพลาดในการประมวลผลรูป', 'danger');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+    }
 }
 
 // --- SUB-TASKS LOGIC ---
@@ -643,34 +660,45 @@ function clearImagePreview(inputId, previewId) {
 // Helper to compress images before storing in LocalStorage
 function readAndCompressImage(file) {
     return new Promise((resolve, reject) => {
+        const img = new Image();
         const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = event => {
-            const img = new Image();
-            img.src = event.target.result;
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
 
-                // Max Width 800px
-                const maxWidth = 800;
-                let width = img.width;
-                let height = img.height;
-
-                if (width > maxWidth) {
-                    height = Math.round(height * maxWidth / width);
-                    width = maxWidth;
-                }
-
-                canvas.width = width;
-                canvas.height = height;
-                ctx.drawImage(img, 0, 0, width, height);
-                // Compress to 0.7 quality JPEG
-                resolve(canvas.toDataURL('image/jpeg', 0.7));
-            };
-            img.onerror = reject;
+        reader.onload = (e) => {
+            img.src = e.target.result;
         };
         reader.onerror = reject;
+
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            // Max Width/Height for storage Optimization
+            const MAX_SIZE = 1200;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+                if (width > MAX_SIZE) {
+                    height *= MAX_SIZE / width;
+                    width = MAX_SIZE;
+                }
+            } else {
+                if (height > MAX_SIZE) {
+                    width *= MAX_SIZE / height;
+                    height = MAX_SIZE;
+                }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Compress to 0.6 quality JPEG for storage
+            resolve(canvas.toDataURL('image/jpeg', 0.6));
+        };
+        img.onerror = reject;
+
+        reader.readAsDataURL(file);
     });
 }
 
@@ -1539,18 +1567,23 @@ function handleDualImage(inputElement, otherInputId, previewId, statusId) {
     if (otherInput) otherInput.value = '';
 
     if (file) {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            previewContainer.innerHTML = `
-                <img src="${e.target.result}" style="width: 100%; max-height: 250px; object-fit: contain; border-radius: 8px; border: 1px solid var(--glass-border); margin-top: 10px;">
-                <button type="button" onclick="clearDualImagePreview('${inputElement.id}', '${otherInputId}', '${previewId}', '${statusId}')" style="position: absolute; top: 10px; right: 10px; background: var(--danger-color); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">
-                    <i class='bx bx-trash'></i>
+        // Use ObjectURL for fast preview without blocking main thread
+        const objectUrl = URL.createObjectURL(file);
+        previewContainer.innerHTML = `
+            <div style="position: relative; margin-top: 10px; min-height: 100px; background: rgba(0,0,0,0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                <img src="${objectUrl}" style="width: 100%; max-height: 250px; object-fit: contain; border-radius: 8px; border: 1px solid var(--glass-border);">
+                <button type="button" onclick="clearDualImagePreview('${inputElement.id}', '${otherInputId}', '${previewId}', '${statusId}')" style="position: absolute; top: 10px; right: 10px; background: var(--danger-color); color: white; border: none; border-radius: 50%; width: 35px; height: 35px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+                    <i class='bx bx-trash' style="font-size: 1.2rem;"></i>
                 </button>
-            `;
-            previewContainer.style.display = 'block';
-            if (statusContainer) statusContainer.style.display = 'block';
-        };
-        reader.readAsDataURL(file);
+            </div>
+        `;
+        previewContainer.style.display = 'block';
+        if (statusContainer) statusContainer.style.display = 'block';
+
+        // Ensure buttons are visible - scroll into view if needed
+        setTimeout(() => {
+            previewContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
     } else {
         clearDualImagePreview(inputElement.id, otherInputId, previewId, statusId);
     }
