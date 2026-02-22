@@ -155,9 +155,6 @@
                         <button class="btn btn-warning" style="padding: 0.5rem; color:white; border-radius:8px;"
                             onclick="openModal('brainstorm-modal')" title="แนะนำขั้นตอน"><i class='bx bx-bulb'></i>
                             แนะนำ</button>
-                        <button class="btn btn-primary" style="padding: 0.5rem; color:white; border-radius:8px;"
-                            onclick="navigate('calendar')" title="ดูปฏิทิน"><i class='bx bx-calendar'></i>
-                            ปฏิทิน</button>
                         <button class="btn btn-icon" onclick="openAddWorkflowModal()"><i
                                 class='bx bx-plus'></i></button>
                     </div>
@@ -180,7 +177,7 @@
                     </select>
                 </div>
 
-                <div class="timeline" id="workflow-list" style="margin-top: 1rem;">
+                <div id="workflow-list" class="workflow-list-modern">
                     <!-- Items dynamically added -->
                 </div>
             </section>
@@ -330,33 +327,6 @@
                         </table>
                     </div>
                 </div>
-                <!-- Calendar View -->
-                <section id="view-calendar" class="view">
-                    <div class="flex-between">
-                        <h2 class="section-title">ปฏิทินงาน</h2>
-                        <div style="display:flex; gap:0.5rem;">
-                            <button class="btn btn-warning" style="padding: 0.5rem; color:white; border-radius:8px;"
-                                onclick="navigate('workflow')"><i class='bx bx-list-ul'></i> ดูรายการ</button>
-                        </div>
-                    </div>
-
-                    <div class="card" style="padding: 0.5rem;">
-                        <div id="calendar-month-name"
-                            style="text-align: center; font-weight: 600; margin-bottom: 0.5rem; font-size: 1.1rem; color: var(--primary-color);">
-                        </div>
-                        <div class="calendar-grid">
-                            <div class="calendar-header">อา.</div>
-                            <div class="calendar-header">จ.</div>
-                            <div class="calendar-header">อ.</div>
-                            <div class="calendar-header">พ.</div>
-                            <div class="calendar-header">พฤ.</div>
-                            <div class="calendar-header">ศ.</div>
-                            <div class="calendar-header">ส.</div>
-                            <!-- Days dynamically added -->
-                            <div id="calendar-days" style="display: contents;"></div>
-                        </div>
-                    </div>
-                </section>
         </main>
 
         <!-- Bottom Navigation -->
@@ -471,8 +441,12 @@
             <div class="modal-content card">
                 <div class="modal-header">
                     <h3>เพิ่มรายการซื้อของ</h3>
-                    <button class="close-btn" onclick="closeModal('add-material-modal')"><i
-                            class='bx bx-x'></i></button>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button class="btn btn-success btn-sm btn-save-header" id="save-material-header"
+                            onclick="addMaterial()">บันทึก</button>
+                        <button class="close-btn" onclick="closeModal('add-material-modal')"><i
+                                class='bx bx-x'></i></button>
+                    </div>
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
@@ -559,8 +533,12 @@
             <div class="modal-content card">
                 <div class="modal-header">
                     <h3>จัดการกระบวนการ</h3>
-                    <button class="close-btn" onclick="closeModal('add-workflow-modal')"><i
-                            class='bx bx-x'></i></button>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button class="btn btn-success btn-sm btn-save-header" id="save-workflow-header"
+                            onclick="saveWorkflow()">บันทึก</button>
+                        <button class="close-btn" onclick="closeModal('add-workflow-modal')"><i
+                                class='bx bx-x'></i></button>
+                    </div>
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
@@ -662,7 +640,12 @@
             <div class="modal-content card">
                 <div class="modal-header">
                     <h3 id="rental-modal-title">เพิ่มรายการของเช่า</h3>
-                    <button class="close-btn" onclick="closeModal('add-rental-modal')"><i class='bx bx-x'></i></button>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button class="btn btn-success btn-sm btn-save-header" id="save-rental-header"
+                            onclick="saveRental()">บันทึก</button>
+                        <button class="close-btn" onclick="closeModal('add-rental-modal')"><i
+                                class='bx bx-x'></i></button>
+                    </div>
                 </div>
                 <div class="modal-body">
                     <div class="form-group">

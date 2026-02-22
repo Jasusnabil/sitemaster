@@ -731,48 +731,67 @@ function clearImagePreview(inputId, previewId) {
 }
 
 // Helper to compress images before storing in LocalStorage
-function readAndCompressImage(file) {
+// Optimized to be non-blocking using toBlob and yielding to the main thread
+async function readAndCompressImage(file) {
     return new Promise((resolve, reject) => {
         const img = new Image();
         const objectUrl = URL.createObjectURL(file);
 
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
+        img.onload = async () => {
+            try {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
 
-            // Max Width/Height for storage Optimization
-            // Reduced to 1000 for better mobile performance and less memory spike
-            const MAX_SIZE = 1000;
-            let width = img.width;
-            let height = img.height;
+                const MAX_SIZE = 1000;
+                let width = img.width;
+                let height = img.height;
 
-            if (width > height) {
-                if (width > MAX_SIZE) {
-                    height *= MAX_SIZE / width;
-                    width = MAX_SIZE;
+                if (width > height) {
+                    if (width > MAX_SIZE) {
+                        height *= MAX_SIZE / width;
+                        width = MAX_SIZE;
+                    }
+                } else {
+                    if (height > MAX_SIZE) {
+                        width *= MAX_SIZE / height;
+                        height = MAX_SIZE;
+                    }
                 }
-            } else {
-                if (height > MAX_SIZE) {
-                    width *= MAX_SIZE / height;
-                    height = MAX_SIZE;
-                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                // Use requestAnimationFrame to ensure we don't block the UI before starting heavy draw
+                requestAnimationFrame(() => {
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Yield again before compression
+                    setTimeout(() => {
+                        canvas.toBlob((blob) => {
+                            URL.revokeObjectURL(objectUrl);
+                            if (!blob) {
+                                reject(new Error('การแปลงรูปภาพล้มเหลว'));
+                                return;
+                            }
+
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                                resolve(reader.result); // Base64 for LocalStorage
+                            };
+                            reader.onerror = reject;
+                            reader.readAsDataURL(blob);
+                        }, 'image/jpeg', 0.5); // 0.5 quality for mobile efficiency
+                    }, 0);
+                });
+            } catch (err) {
+                URL.revokeObjectURL(objectUrl);
+                reject(err);
             }
-
-            canvas.width = width;
-            canvas.height = height;
-            ctx.drawImage(img, 0, 0, width, height);
-
-            // Compress to 0.5 quality JPEG for storage efficiency
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
-
-            // Clean up to save memory
-            URL.revokeObjectURL(objectUrl);
-            resolve(dataUrl);
         };
 
         img.onerror = (e) => {
             URL.revokeObjectURL(objectUrl);
-            reject(e);
+            reject(new Error('โหลดรูปภาพไม่สำเร็จ'));
         };
 
         img.src = objectUrl;
@@ -1644,18 +1663,29 @@ function handleDualImage(inputElement, otherInputId, previewId, statusId) {
     if (otherInput) otherInput.value = '';
 
     if (file) {
+        // Fast cleanup of previous URL if exists to avoid leaks
+        if (previewContainer.dataset.lastUrl) {
+            URL.revokeObjectURL(previewContainer.dataset.lastUrl);
+        }
+
         // Use ObjectURL for fast preview without blocking main thread
         const objectUrl = URL.createObjectURL(file);
+        previewContainer.dataset.lastUrl = objectUrl;
+
         previewContainer.innerHTML = `
-            <div style="position: relative; margin-top: 10px; min-height: 100px; background: rgba(0,0,0,0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-                <img src="${objectUrl}" style="width: 100%; max-height: 250px; object-fit: contain; border-radius: 8px; border: 1px solid var(--glass-border);">
-                <button type="button" onclick="clearDualImagePreview('${inputElement.id}', '${otherInputId}', '${previewId}', '${statusId}')" style="position: absolute; top: 10px; right: 10px; background: var(--danger-color); color: white; border: none; border-radius: 50%; width: 35px; height: 35px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+            <div style="position: relative; margin-top: 10px; min-height: 100px; background: rgba(0,0,0,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px solid var(--primary-color);">
+                <img src="${objectUrl}" style="width: 100%; max-height: 250px; object-fit: contain; display: block;">
+                <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); color: white; padding: 5px; font-size: 0.7rem; text-align: center;">เตรียมพร้อมบันทึก</div>
+                <button type="button" onclick="clearDualImagePreview('${inputElement.id}', '${otherInputId}', '${previewId}', '${statusId}')" style="position: absolute; top: 10px; right: 10px; background: var(--danger-color); color: white; border: none; border-radius: 50%; width: 35px; height: 35px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3); z-index: 10;">
                     <i class='bx bx-trash' style="font-size: 1.2rem;"></i>
                 </button>
             </div>
         `;
         previewContainer.style.display = 'block';
-        if (statusContainer) statusContainer.style.display = 'block';
+        if (statusContainer) {
+            statusContainer.innerHTML = `<i class='bx bx-check-double'></i> เลือกรูปภาพแล้ว พร้อมประมวลผลเมื่อกดบันทึก`;
+            statusContainer.style.display = 'block';
+        }
 
         // Ensure buttons are visible - scroll into view if needed
         setTimeout(() => {
@@ -1676,11 +1706,17 @@ function clearDualImagePreview(inputId1, inputId2, previewId, statusId) {
     if (input2) input2.value = '';
 
     if (previewContainer) {
+        if (previewContainer.dataset.lastUrl) {
+            URL.revokeObjectURL(previewContainer.dataset.lastUrl);
+            delete previewContainer.dataset.lastUrl;
+        }
         previewContainer.innerHTML = '';
         previewContainer.style.display = 'none';
     }
 
-    if (statusContainer) statusContainer.style.display = 'none';
+    if (statusContainer) {
+        statusContainer.style.display = 'none';
+    }
 }
 
 function checkRentalAlerts() {
